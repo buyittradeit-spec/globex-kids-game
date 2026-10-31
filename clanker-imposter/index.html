@@ -100,6 +100,10 @@
       <select id="playersSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
         <option value="1">1 Player</option><option value="2">2 Players (split screen)</option>
       </select></div>
+    <div style="margin:6px 0 4px;font-weight:700">🤖 Clankers:
+      <select id="clankSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
+        <option value="1">1 Clanker</option><option value="2" selected>2 Clankers</option><option value="3">3 Clankers</option>
+      </select></div>
     <div id="twoHelp" class="how" style="display:none;margin-top:6px;font-size:14px">
       <b>🟦 Player 1 (left):</b> W/S walk · A/D turn · F solve · G report / red button<br>
       <b>🟥 Player 2 (right):</b> ↑/↓ walk · ←/→ turn · Enter solve · Shift report / red button<br>
@@ -110,7 +114,7 @@
         <option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option>
       </select></div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v0.7 · Globex Kids · All music is original, made in code</div>
+    <div class="credit">Demo v0.8 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -298,7 +302,7 @@ function musicTick() {
   const S = SONGS[name], sixteenth = 60 / S.bpm / 4;
   if (MUSIC.next < ac.currentTime) MUSIC.next = ac.currentTime + .05;
   while (MUSIC.next < ac.currentTime + .15) { playStep(name, MUSIC.step, MUSIC.next); MUSIC.next += sixteenth; MUSIC.step++; }
-  const target = (G && G.clanker && G.clanker.hunting) ? .12 : (G && G.paused && !G.over ? .25 : .45);
+  const target = (G && G.kids && G.kids.some(c => c.isClanker && c.hunting)) ? .12 : (G && G.paused && !G.over ? .25 : .45);
   MUSIC.gain.gain.setTargetAtTime(target, ac.currentTime, .3);
 }
 function musicStart() {
@@ -510,10 +514,12 @@ function newGame() {
   const twoP = $('playersSel').value === '2';
   if (twoP) kids[1].isPlayer = true;
   const humans = kids.filter(k => k.isPlayer); humans.forEach((h, i) => { h.pi = i; h.emUses = 1; h.yaw = Math.PI / 2; });
-  const clanker = kids[randi(humans.length, kids.length - 1)]; clanker.isClanker = true;
-  Object.assign(clanker, { cool: 25, hunting: false, huntT: 0, target: null, chaseT: 0, shiftCd: rand(12, 25), replanT: 0, clankT: 0 });
+  const nClank = +$('clankSel').value || 1;
+  const pool = shuffle(kids.filter(k => !k.isPlayer)).slice(0, nClank);
+  pool.forEach((c, i) => { c.isClanker = true; Object.assign(c, { cool: 25 + i * 8, hunting: false, huntT: 0, target: null, chaseT: 0, shiftCd: rand(12, 25) + i * 10, replanT: 0, clankT: 0 }); });
+  const clanker = pool[0];
   const notebooks = [];
-  const extra = ['lunch', 'gym', 'library', 'auditorium', 'robotics', 'geography', 'spelling'];
+  const extra = ['lunch', 'gym', 'library', 'classroom', 'science', 'history', 'art']; // 15 + 7 = 22 downstairs, 8 upstairs
   ROOM_KEYS.forEach(k => {
     const n = 1 + (extra.includes(k) ? 1 : 0); // 23 rooms + 7 extra = 30 notebooks
     for (let i = 0; i < n; i++) {
@@ -536,6 +542,10 @@ function teleportToLunch() {
   G.kids.forEach((k, i) => { k.x = spots[i].x; k.y = spots[i].y; k.path = []; k.wait = rand(0.5, 2.5); k.task = null; k.solveT = 0; });
 }
 const living = () => G.kids.filter(k => k.state === 'alive');
+const clankers = () => G.kids.filter(k => k.isClanker);
+const aliveClankers = () => G.kids.filter(k => k.isClanker && k.state === 'alive');
+const hunterOf = h => G.kids.find(c => c.isClanker && c.hunting && c.huntTarget === h);
+const clankerNames = () => clankers().map(c => `<b style="color:${c.color}">${c.name}</b>`).join(' and ');
 const innocentsLeft = () => G.kids.filter(k => k.state === 'alive' && !k.isClanker).length;
 const shownName = k => k.disguise ? k.disguise.name : k.name;
 const shownColor = k => k.disguise ? k.disguise.color : k.color;
@@ -552,7 +562,7 @@ function updateHud() {
   const jam = sabOn('comms');
   $('nbText').textContent = jam ? '?? / ??' : `${done}/${G.notebooks.length}`;
   $('barFill').style.width = jam ? '0' : (100 * done / G.notebooks.length) + '%';
-  $('kidsLeft').textContent = innocentsLeft() + (G.clanker.state === 'alive' ? 1 : 0);
+  $('kidsLeft').textContent = innocentsLeft() + aliveClankers().length;
   roomHud();
 }
 function passHud() {
@@ -623,10 +633,9 @@ function followPath(k, dt, speed, onArrive) {
     k.stuckT = 0; k.lastPos = { x: k.x, y: k.y };
   }
 }
-function isolated(victim) {
-  const c = G.clanker;
+function isolated(victim, c) {
   const sees = (j, e) => { const d = dist(j, e); const vd = viewDist() * .7; return d < vd && (areaAt(j.x, j.y) === areaAt(e.x, e.y) || d < vd * .52); };
-  return living().every(j => j === c || j === victim || (!sees(j, c) && !sees(j, victim))) && (G.teachers || []).every(t => !sees(t, c) && !sees(t, victim));
+  return living().every(j => j === c || j === victim || j.isClanker || (!sees(j, c) && !sees(j, victim))) && (G.teachers || []).every(t => !sees(t, c) && !sees(t, victim));
 }
 function clankerThink(c, dt) {
   c.cool -= dt; c.shiftCd -= dt;
@@ -644,14 +653,14 @@ function clankerThink(c, dt) {
     if (c.clankT <= 0) { const v = Math.max(0.05, 1 - dist(c, p) / 650); SFX.clank(v); c.clankT = 0.45; }
     if (c.replanT <= 0) { c.path = planPath(c, p); c.replanT = 0.6; }
     followPath(c, dt, 128);
-    if (p.state === 'alive' && dist(c, p) < 30) { freeze(p); c.hunting = false; c.cool = 22; }
+    if (p.state === 'alive' && dist(c, p) < 30) { freeze(p, c); c.hunting = false; c.cool = 22; }
     if (c.huntT <= 0 || p.state !== 'alive') { c.hunting = false; c.path = []; $('huntWarn').style.display = 'none'; }
     return;
   }
   // normal freeze attempts
   if (c.cool <= 0) {
     if (!c.target || c.target.state !== 'alive') {
-      const cands = living().filter(k => k !== c && isolated(k) && dist(k, c) < 900).sort((a, b) => dist(a, c) - dist(b, c));
+      const cands = living().filter(k => !k.isClanker && isolated(k, c) && dist(k, c) < 900).sort((a, b) => dist(a, c) - dist(b, c));
       if (cands.length) { c.target = cands[0]; c.chaseT = 0; c.task = null; c.solveT = 0; c.wait = 0; }
     }
     if (c.target) {
@@ -659,7 +668,7 @@ function clankerThink(c, dt) {
       if (c.replanT <= 0) { c.path = planPath(c, c.target); c.replanT = 0.5; }
       followPath(c, dt, 130);
       if (dist(c, c.target) < 32) {
-        if (isolated(c.target)) { freeze(c.target); c.cool = rand(13, 19); } else c.cool = 3;
+        if (isolated(c.target, c)) { freeze(c.target, c); c.cool = rand(13, 19); } else c.cool = 3;
         c.target = null; c.path = [];
       } else if (c.chaseT > 9) { c.target = null; c.path = []; c.cool = 4; }
       return;
@@ -667,8 +676,8 @@ function clankerThink(c, dt) {
   }
   botThink(c, dt);
 }
-function freeze(v) {
-  const c = G.clanker;
+function freeze(v, c) {
+  c = c || aliveClankers()[0];
   SFX.zap();
   G.fx.push({ type: 'zap', x1: c.x, y1: c.y, x2: v.x, y2: v.y, t: 0.45 });
   G.statues.push({ x: v.x, y: v.y, color: v.color, name: v.name, reported: false, kid: v, area: areaAt(v.x, v.y).name });
@@ -678,7 +687,7 @@ function freeze(v) {
   const seer = G.humans.find(h => h !== v && h.state === 'alive' && (canSee(c, h) || canSee(v, h)));
   if (v.isPlayer) {
     toast(G.twoP ? `🧊 ${shown} zapped Player ${v.pi + 1}! They're a ghost now but can keep solving notebooks.` : `🧊 ${shown} zapped YOU! You're a ghost now. Keep solving notebooks!`);
-    if (G.clanker.huntTarget === v) $('huntWarn').style.display = 'none';
+    if (hunterOf(v)) $('huntWarn').style.display = 'none';
   }
   if (seer) toast(`⚡ ${G.twoP ? 'Player ' + (seer.pi + 1) + ' saw' : 'You saw'} ${shown} zap ${v.isPlayer ? pname(v) : v.name}!`);
   v.state = 'ghost'; v.path = []; v.task = null; v.solveT = 0; v.wait = 1;
@@ -755,11 +764,11 @@ function submitAnswer() {
     updateHud(); setTimeout(() => { closeNotebook(); checkWin(); }, 700);
   } else {
     SFX.buzz();
-    const c = G.clanker, own = G.nbOwner;
-    $('nbMsg').textContent = `Oops! The answer was ${prob.r}.` + (own.state === 'alive' && c.state === 'alive' ? ` The Clanker heard ${G.twoP ? 'Player ' + (own.pi + 1) : 'you'}... RUN! 🔊` : '');
+    const own = G.nbOwner, c = aliveClankers().filter(k => !k.hunting).sort((a, b) => dist(a, own) - dist(b, own))[0];
+    $('nbMsg').textContent = `Oops! The answer was ${prob.r}.` + (own.state === 'alive' && c ? ` The Clanker heard ${G.twoP ? 'Player ' + (own.pi + 1) : 'you'}... RUN! 🔊` : '');
     setTimeout(() => {
       closeNotebook();
-      if (own.state === 'alive' && c.state === 'alive' && !G.over) {
+      if (own.state === 'alive' && c && c.state === 'alive' && !G.over) {
         c.huntTarget = own; c.hunting = true; c.huntT = 11; c.replanT = 0; c.clankT = 0; c.target = null; c.task = null; c.solveT = 0; c.wait = 0;
         $('huntWarn').style.display = 'block'; $('huntWarn').textContent = G.twoP ? `🔊 CLANK... CLANK... RUN, PLAYER ${own.pi + 1}!` : '🔊 CLANK... CLANK... RUN!';
       }
@@ -788,7 +797,7 @@ function startMeeting(reporter, statue) {
   if (critical()) { if (reporter.isPlayer) toast('🚨 Fix the sabotage first!'); return; }
   if (G.sab) endSabotage();
   G.paused = true; closeNotebook();
-  G.clanker.hunting = false; $('huntWarn').style.display = 'none';
+  clankers().forEach(c => c.hunting = false); $('huntWarn').style.display = 'none';
   G.statues.forEach(s => s.reported = true);
   SFX.bell();
   const m = G.meeting = { votes: {}, playerVote: null, phase: 'talk', timer: null };
@@ -806,7 +815,7 @@ function startMeeting(reporter, statue) {
   speakers.forEach(k => {
     const here = areaAt(k.x, k.y).name;
     if (k.isClanker) {
-      const others = living().filter(o => o !== k);
+      const others = living().filter(o => o !== k && !o.isClanker);
       if (Math.random() < 0.45 && others.length) { const o = pick(others); accused.push(o.name); lines.push([k, `I think ${o.name} is acting weird! 🤨`]); }
       else lines.push([k, `I was in the ${pick(ROOM_KEYS.map(r => AREAS[r].name))} doing a notebook.`]);
     } else if (k.saw) {
@@ -875,7 +884,7 @@ function finishVoting() {
     const others = living().filter(o => o !== k);
     let v = 'skip';
     const acc = m.accused.filter(n => n !== k.name && kidByName(n).state === 'alive');
-    if (k.isClanker) { const inn = acc.filter(n => n !== k.name); v = inn.length ? pick(inn) : (Math.random() < .5 ? pick(others).name : 'skip'); }
+    if (k.isClanker) { const inn = acc.filter(n => n !== k.name && !kidByName(n).isClanker); const innO = others.filter(o => !o.isClanker); v = inn.length ? pick(inn) : (Math.random() < .5 && innO.length ? pick(innO).name : 'skip'); }
     else if (k.saw && k.saw.name !== k.name && kidByName(k.saw.name).state === 'alive') v = k.saw.name;
     else if (acc.length && Math.random() < 0.6) v = pick(acc);
     else if (m.playerVote && m.playerVote !== 'skip' && m.playerVote !== k.name && Math.random() < 0.35) v = m.playerVote;
@@ -906,8 +915,7 @@ function endMeeting() {
   const m = G.meeting; if (m) { clearTimeout(m.timer); clearInterval(m.timer); }
   G.meeting = null; $('mtgScreen').style.display = 'none';
   G.statues = []; G.kids.forEach(k => { k.saw = null; k.didNotebook = null; });
-  const c = G.clanker; c.cool = 20; c.hunting = false; c.huntTarget = null; c.target = null; c.path = [];
-  if (c.disguise) c.disguise = null;
+  clankers().forEach((c, i) => { c.cool = 20 + i * 6; c.hunting = false; c.huntTarget = null; c.target = null; c.path = []; c.disguise = null; });
   G.emCool = 12; teleportToLunch(); G.paused = false; updateHud(); checkWin();
 }
 $('skipBtn').onclick = () => playerVote('skip');
@@ -915,10 +923,10 @@ $('skipBtn').onclick = () => playerVote('skip');
 // ================= WIN =================
 function checkWin() {
   if (G.over) return;
-  const c = G.clanker;
-  if (c.state === 'out') return endGame(true, `You voted out ${c.name}, the Clanker! 🤖💥`);
-  if (G.notebooks.every(n => n.done)) return endGame(true, `All the math notebooks are solved! 📓⭐<br>The Clanker was <b style="color:${c.color}">${c.name}</b>.`);
-  if (innocentsLeft() <= 1 && !G.paused) return endGame(false, `Only 1 kid is left!<br>The Clanker was <b style="color:${c.color}">${c.name}</b>. 🤖`);
+  const n = clankers().length, word = n > 1 ? 'Clankers were' : 'Clanker was';
+  if (!aliveClankers().length) return endGame(true, `You voted out ${n > 1 ? 'every Clanker' : 'the Clanker'}: ${clankerNames()}! 🤖💥`);
+  if (G.notebooks.every(n => n.done)) return endGame(true, `All the math notebooks are solved! 📓⭐<br>The ${word} ${clankerNames()}.`);
+  if (innocentsLeft() <= aliveClankers().length && !G.paused) return endGame(false, `The Clankers took over the school!<br>The ${word} ${clankerNames()}. 🤖`);
 }
 function endGame(kidsWin, msg) {
   G.over = true; G.paused = true; $('huntWarn').style.display = 'none';
@@ -1282,7 +1290,7 @@ function render() {
   $('mini').style.display = use3d ? 'block' : 'none';
   $('mini').style.right = G && G.twoP ? 'calc(50% - 95px)' : '8px'; $('mini').style.top = G && G.twoP ? 'auto' : '54px'; $('mini').style.bottom = G && G.twoP ? '60px' : 'auto';
   const two = !!(G && G.twoP);
-  const ht = G && G.clanker.hunting && G.clanker.huntTarget && G.clanker.huntTarget.state === 'alive' ? G.clanker.huntTarget : null;
+  const ht = G ? (G.humans.find(h => h.state === 'alive' && hunterOf(h)) || null) : null;
   $('tint').style.display = use3d && ht ? 'block' : 'none';
   if (ht) { $('tint').style.left = two && ht.pi === 1 ? '50%' : '0'; $('tint').style.width = two ? '50%' : '100%'; }
   const showSplit = two && !G.eject && !G.over;
@@ -1343,7 +1351,7 @@ function drawView2D(p, vx, vw, s) {
     g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, lt ? 'rgba(0,0,0,.96)' : 'rgba(0,0,0,.82)');
     ctx.fillStyle = g; ctx.fillRect(vx, 0, vw, ch);
   } else { ctx.fillStyle = 'rgba(40,60,120,.18)'; ctx.fillRect(vx, 0, vw, ch); }
-  if (p.state === 'alive' && G.clanker.hunting && G.clanker.huntTarget === p) { ctx.fillStyle = `rgba(200,0,0,${0.12 + Math.sin(G.t * 14) * 0.08})`; ctx.fillRect(vx, 0, vw, ch); }
+  if (p.state === 'alive' && hunterOf(p)) { ctx.fillStyle = `rgba(200,0,0,${0.12 + Math.sin(G.t * 14) * 0.08})`; ctx.fillRect(vx, 0, vw, ch); }
   ctx.restore();
 }
 
@@ -1386,7 +1394,7 @@ function updateEject(dt) {
       if (h.y > 40 && h.vy > 0) { h.vy *= -.6; h.vx *= .8; if (Math.abs(h.vy) > 60) SFX.boing(); }
     }
     G.parts.forEach(q => { if (q.sx !== undefined) { q.sx += q.vx * dt; q.sy += q.vy * dt; q.vy += 300 * dt; } });
-    if (e.t > 5.2) { G.eject = null; G.over = false; checkWin(); }
+    if (e.t > 5.2) { G.eject = null; if (aliveClankers().length) { toast(`🤖 1 Clanker down! ${aliveClankers().length} more hiding...`); endMeeting(); } else checkWin(); }
   } else if (e.t > 2.8) { G.eject = null; endMeeting(); }
 }
 
@@ -1636,8 +1644,8 @@ function init3D() {
   const spotMesh = {};
   for (const k in SPOTS) { const sp = SPOTS[k];
     const off = { E: [10, 0], W: [-10, 0], S: [0, 10], N: [0, -10] }[sp.wall];
-    const m = new THREE.Mesh(new THREE.BoxGeometry(off[0] ? 4 : 22, 30, off[0] ? 22 : 4), col(0x566573)); m.position.set(sp.x + off[0], 42, sp.y + off[1]); scene.add(m);
-    const light = new THREE.Mesh(new THREE.SphereGeometry(3, 10, 8), lam({ color: 0x2ecc71, emissive: 0x115522 })); light.position.set(sp.x + off[0] * .75, 54, sp.y + off[1] * .75); light.userData.dyn = true; scene.add(light);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(off[0] ? 4 : 22, 30, off[0] ? 22 : 4), col(0x566573)); m.position.set(sp.x + off[0], baseOf(sp.y) + 42, zOf(sp.y) + off[1]); scene.add(m);
+    const light = new THREE.Mesh(new THREE.SphereGeometry(3, 10, 8), lam({ color: 0x2ecc71, emissive: 0x115522 })); light.position.set(sp.x + off[0] * .75, baseOf(sp.y) + 54, zOf(sp.y) + off[1] * .75); light.userData.dyn = true; scene.add(light);
     spotMesh[k] = light; }
   // the door that the Clanker can lock
   const lockDoor = new THREE.Mesh(new THREE.BoxGeometry(1, 104, 1), lam({ color: 0x922b21 })); lockDoor.visible = false; lockDoor.userData.dyn = true; scene.add(lockDoor);
@@ -1708,10 +1716,11 @@ function kidModel(L, opts = {}) {
   add(bx(9, 18, 16), L.color, 0, 27, 0);
   add(bx(9.4, 2.5, 7), shade(L.color, 1.25), 0, 35.5, 0);
   if (L.tie) add(bx(1, 11, 2.4), L.tie, 4.8, 29, 0);
+  if (L.skirt) { add(bx(11, 9, 18), L.skirt, 0, 15.5, 0); add(bx(9.6, 3, 16.6), L.skirt, 0, 19.5, 0); }
   // arms (pivot at shoulders)
   const armL = limb(0, 34, -10.2), armR = limb(0, 34, 10.2);
   for (const arm of [armL, armR]) { add(bx(4.2, 14, 4.2), shade(L.color, .85), 0, -7, 0, arm); add(sp(2.6), L.skin, 0, -15.5, 0, arm); }
-  if (L.tie) { const cb = add(bx(7, 9, 1), '#a0522d', 4, -14, 2.5, armR); add(bx(6, 7, .4), '#fdfefe', 4, -14, 3.2, armR); }
+  if (L.clip || L.tie) { add(bx(7, 9, 1), '#a0522d', 4, -14, 2.5, armR); add(bx(6, 7, .4), '#fdfefe', 4, -14, 3.2, armR); }
   // head
   add(bx(4, 3, 4), L.skin, 0, 37.5, 0);
   const head = limb(0, 45.5, 0);
@@ -1723,6 +1732,7 @@ function kidModel(L, opts = {}) {
   if (L.style === 3) { hair(L.color); add(bx(8, 1, 12), shade(L.color, .7), 7, 3.2, 0, head); }
   else hair(L.hair);
   if (L.style === 1) add(sp(3.6), L.hair, -9.5, -2, 0, head).scale.set(1, 1.7, 1);
+  if (L.beard) { add(bx(3, 5, 11), L.hair, 6.2, -5.5, 0, head); add(bx(2, 1.5, 7), L.hair, 7.7, -1.8, 0, head); }
   if (L.style === 2) for (const [a, b, c2] of [[-3, 6, -5], [-3, 6, 5], [-6, 3, 0], [1, 7.5, 0], [-6, 1, -5], [-6, 1, 5]]) add(sp(3.8), L.hair, a, b, c2, head);
   if (L.style === 4) { add(bx(3, 13, 2), L.hair, -1.5, -4, -8.3, head); add(bx(3, 13, 2), L.hair, -1.5, -4, 8.3, head); add(bx(2.5, 13, 15), L.hair, -7.4, -3.5, 0, head); }
   // soft shadow
@@ -1843,9 +1853,14 @@ function setView(v) {
 // ================= TEACHERS, HALL PASSES & SABOTAGE =================
 const MIX_LOOK = { name: '???', color: '#808b96', hair: '#4d5656', skin: '#c8a27a', style: 0, pants: '#566573', blink: 0 };
 LOOKS[MIX_LOOK.color] = MIX_LOOK;
+const F1_ZONES = ['hall', 'hall2', 'conn', 'stairs'], F2_ZONES = ['hallF2', 'stairs2'];
 const TEACH_DEFS = [
-  { name: 'Mr. Gears', look: { color: '#f4f6f6', hair: '#7f8c8d', skin: '#e0ac69', style: 0, pants: '#2c3e50', blink: .4, tie: '#c0392b' } },
-  { name: 'Ms. Bolt', look: { color: '#7d3c98', hair: '#2c1608', skin: '#8d5524', style: 4, pants: '#34495e', blink: 1.9, tie: '#f1c40f' } },
+  { name: 'Mr. Gears',   floor: 1, x: 450,  y: 460,  look: { color: '#f4f6f6', hair: '#7f8c8d', skin: '#e0ac69', style: 0, pants: '#2c3e50', blink: .4, tie: '#c0392b', clip: true } },
+  { name: 'Mr. Piston',  floor: 1, x: 1500, y: 820,  look: { color: '#5d6d7e', hair: '#1a1a1a', skin: '#7b4a2a', style: 0, pants: '#1b2631', blink: 1.1, tie: '#2980b9', clip: true, beard: true } },
+  { name: 'Ms. Bolt',    floor: 1, x: 1200, y: 460,  look: { color: '#7d3c98', hair: '#2c1608', skin: '#8d5524', style: 4, pants: '#5d4037', blink: 1.9, skirt: '#4a235a', clip: true } },
+  { name: 'Mr. Rivet',   floor: 2, x: 600,  y: 2240, look: { color: '#a04000', hair: '#e8c26a', skin: '#ffdbac', style: 0, pants: '#34495e', blink: .7, tie: '#27ae60', clip: true } },
+  { name: 'Mrs. Wrench', floor: 2, x: 1300, y: 2240, look: { color: '#117864', hair: '#c0541c', skin: '#ffe0bd', style: 1, pants: '#d5a6bd', blink: 2.4, skirt: '#0e6655', clip: true } },
+  { name: 'Ms. Circuit', floor: 2, x: 1800, y: 2240, look: { color: '#c0392b', hair: '#1a1a1a', skin: '#c68642', style: 4, pants: '#7b4a2a', blink: 1.5, skirt: '#1b2631', clip: true } },
 ];
 TEACH_DEFS.forEach(d => LOOKS[d.look.color] = d.look);
 const PASS_DESK = { x: 1745, y: 935 };
@@ -1854,17 +1869,17 @@ LOOKS[PRINCIPAL.look.color] = PRINCIPAL.look;
 const DET_SEATS = [{ x: 1668, y: 1010 }, { x: 1668, y: 1080 }];
 const SPOTS = {
   fuse:   { x: 2017, y: 640,  wall: 'E', label: 'fuse box (East Hallway)' },
-  server: { x: 905,  y: 1185, wall: 'S', label: 'server (Computer Lab)' },
+  server: { x: 1118, y: 1830, wall: 'W', label: 'server (Robotics Lab, upstairs)' },
   boilA:  { x: 668,  y: 612,  wall: 'W', label: 'west valve' },
   boilB:  { x: 982,  y: 612,  wall: 'E', label: 'east valve' },
   airA:   { x: 172,  y: 755,  wall: 'W', label: 'Library air panel' },
-  airB:   { x: 1622, y: 960,  wall: 'W', label: "Principal's Office air panel" },
+  airB:   { x: 1318, y: 2360, wall: 'W', label: "Nurse's Office air panel (upstairs)" },
 };
 const SAB_INFO = {
   lights: { spots: ['fuse'], crit: false, w: 3, title: '💡 LIGHTS OUT!', how: 'Fix the fuse box in the East Hallway' },
-  comms:  { spots: ['server'], crit: false, w: 2, title: '📡 INTERCOM JAMMED!', how: 'Fix the server in the Computer Lab' },
+  comms:  { spots: ['server'], crit: false, w: 2, title: '📡 INTERCOM JAMMED!', how: 'Fix the server in the Robotics Lab (upstairs!)' },
   boiler: { spots: ['boilA', 'boilB'], crit: true, time: 45, w: 1.5, title: '🔥 BOILER MELTDOWN', how: 'Two kids must hold BOTH valves on the Warehouse Floor at the same time!' },
-  air:    { spots: ['airA', 'airB'], crit: true, time: 50, w: 1.5, title: '🌫️ AIR FILTERS CLOGGED', how: "Enter the codes at the Library and Principal's Office panels!" },
+  air:    { spots: ['airA', 'airB'], crit: true, time: 50, w: 1.5, title: '🌫️ AIR FILTERS CLOGGED', how: "Enter the codes at the Library and Nurse's Office (upstairs!) panels!" },
   doors:  { spots: [], crit: false, time: 12, w: 2.5, title: '🚪 DOORS LOCKED!', how: '' },
   mixup:  { spots: [], crit: false, time: 20, w: 2, title: '🎭 COSTUME CHAOS!', how: 'Everyone looks the same for 20 seconds!' },
 };
@@ -1873,7 +1888,7 @@ const critical = () => G && G.sab && SAB_INFO[G.sab.type].crit;
 const viewDist = () => sabOn('lights') ? 120 : 300;
 
 function initExtras() {
-  G.teachers = TEACH_DEFS.map((d, i) => ({ name: d.name, look: d.look, color: d.look.color, x: i ? 1500 : 450, y: i ? 820 : 460, r: 14, state: 'alive', path: [], wait: 1, task: null, solveT: 0, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, cd: [0, 0], say: '', sayT: 0, stopT: 0, id: 20 + i, isTeacher: true }));
+  G.teachers = TEACH_DEFS.map((d, i) => ({ name: d.name, look: d.look, color: d.look.color, zones: d.floor === 2 ? F2_ZONES : F1_ZONES, x: d.x, y: d.y, r: 14, state: 'alive', path: [], wait: 1, task: null, solveT: 0, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, cd: [0, 0], say: '', sayT: 0, stopT: 0, id: 20 + i, isTeacher: true }));
   G.teachers.push({ name: PRINCIPAL.name, look: PRINCIPAL.look, color: PRINCIPAL.look.color, x: PASS_DESK.x, y: PASS_DESK.y - 36, r: 14, state: 'alive', path: [], wait: 0, task: null, solveT: 0, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, cd: [0, 0], say: '', sayT: 0, stopT: 0, id: 30, isTeacher: true, stay: true, hd: Math.PI / 2 });
   G.humans.forEach(h => { h.passT = 0; h.needPass = false; h.stopT = 0; h.fixing = null; h.passClock = 0; h.detT = 0; h.detCount = 0; });
   G.bellT = 75; G.principal = G.teachers[G.teachers.length - 1];
@@ -1891,7 +1906,7 @@ function updateTeachers(dt) {
     if (t.stopT > 0) { t.stopT -= dt; continue; }
     if (t.wait > 0) t.wait -= dt;
     else {
-      if (!t.path.length) t.path = planPath(t, randPointIn(AREAS[pick(HALL_KEYS)]));
+      if (!t.path.length) t.path = planPath(t, randPointIn(AREAS[pick(t.zones)]));
       followPath(t, dt, 72, () => { t.wait = rand(1, 3); });
     }
     for (const h of G.humans) {
@@ -1914,7 +1929,7 @@ function updateTeachers(dt) {
       h.passClock -= dt;
       if (h.passClock <= 0) {
         h.passClock = 0; h.detCount++; h.detT = 20 * h.detCount; h.fixing = null;
-        if (G.clanker.huntTarget === h) { G.clanker.hunting = false; G.clanker.huntTarget = null; $('huntWarn').style.display = 'none'; }
+        { const hc = hunterOf(h); if (hc) { hc.hunting = false; hc.huntTarget = null; $('huntWarn').style.display = 'none'; } }
         G.principal.say = 'Detention! Have a seat. ⏰'; G.principal.sayT = 3; SFX.buzz();
         toast(`⏰ Too late! ${G.twoP ? 'Player ' + (h.pi + 1) + ' gets' : 'You get'} DETENTION for ${h.detT} seconds in the Principal's Office!`);
       }
@@ -1959,10 +1974,10 @@ function occupied(spot) {
   return living().some(k => !k.isClanker && ((k.isPlayer && k.fixing === spot && dist(k, S) < 55) || (!k.isPlayer && k.fixSpot === spot && dist(k, S) < 34)));
 }
 function updateSabotage(dt) {
-  const c = G.clanker;
+  const c = aliveClankers()[0] || clankers()[0];
   if (!G.sab) {
     G.sabCd -= dt;
-    if (G.sabCd <= 0 && c.state === 'alive') {
+    if (G.sabCd <= 0 && aliveClankers().length) {
       const types = Object.keys(SAB_INFO), tot = types.reduce((a, k) => a + SAB_INFO[k].w, 0);
       let r = Math.random() * tot, ty = types[0]; for (const k of types) { r -= SAB_INFO[k].w; if (r <= 0) { ty = k; break; } }
       startSabotage(ty);
@@ -1996,7 +2011,7 @@ function updateSabotage(dt) {
     if (S.done.airA && S.done.airB) return endSabotage('🌫️ Air filters are clean again!');
   }
   if (info.time && S.t <= 0) {
-    if (info.crit) return endGame(false, `${S.type === 'boiler' ? '🔥 The boiler melted down!' : '🌫️ The air filters clogged up!'}<br>The Clanker was <b style="color:${c.color}">${c.name}</b>. 🤖`);
+    if (info.crit) return endGame(false, `${S.type === 'boiler' ? '🔥 The boiler melted down!' : '🌫️ The air filters clogged up!'}<br>The ${clankers().length > 1 ? 'Clankers were' : 'Clanker was'} ${clankerNames()}. 🤖`);
     return endSabotage(S.type === 'doors' ? '🚪 The doors unlocked.' : '🎭 Costumes are back to normal!');
   }
 }
@@ -2007,7 +2022,7 @@ function sabBanner() {
   let how = info.how;
   if (S.type === 'doors') how = `The Clanker locked the ${S.room} doors!`;
   if (S.type === 'boiler') how += `  (${occupied('boilA') ? '✅' : '⬜'} west · ${occupied('boilB') ? '✅' : '⬜'} east)`;
-  if (S.type === 'air') how += `  (${S.done.airA ? '✅' : '⬜'} Library · ${S.done.airB ? '✅' : '⬜'} Office)`;
+  if (S.type === 'air') how += `  (${S.done.airA ? '✅' : '⬜'} Library · ${S.done.airB ? '✅' : '⬜'} Nurse)`;
   if (S.type === 'lights' || S.type === 'comms') { const p = S.prog[info.spots[0]]; if (p > 0) how += `  🔧 ${Math.min(100, Math.round(p / 3 * 100))}%`; }
   const tm = info.time ? `  ⏱️ ${Math.max(0, Math.ceil(S.t))}` : '';
   el.innerHTML = `<b>${info.title}${tm}</b><br><span style="font-size:14px">${how}</span>`;

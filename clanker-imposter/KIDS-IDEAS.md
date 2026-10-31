@@ -92,5 +92,11 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - Detention 20 s, then 40, 60… (+20 each time)
 - Open classroom doors, mini-map shows 1F / 2F, faster 3D drawing
 
+## Added in v0.8
+- 🤖 Pick 1, 2 or 3 Clankers on the start screen (Clankers win when they equal the kids left; vote out ALL of them to win)
+- 🧑‍🏫 6 teachers: downstairs Mr. Gears, Mr. Piston, Ms. Bolt · upstairs Mr. Rivet, Mrs. Wrench, Ms. Circuit (3 men, 3 women)
+- 🔧 Sabotages upstairs: Intercom server in the Robotics Lab, an air panel in the Nurse's Office
+- 📓 22 notebooks downstairs, 8 upstairs
+
 ## Still to decide
 - Quick-chat phrases
