@@ -6,7 +6,7 @@ Browser games for Globex Kids, built together with the kids who play them.
 
 | Folder | Game | Status |
 |---|---|---|
-| `lunch-game/` | Robot lunchroom imposter game: find the robots faking lunch (name TBD by the kids) | Planning |
+| `clanker-imposter/` | Clanker Imposter: find the disguised robot, solve math notebooks, report frozen kids, vote it out | Designing with the kids |
 
 ## Ground rules for every game here
 
