@@ -113,5 +113,11 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🧒 Choose how many kids are in the school: 6 to 20 (Clankers limited to 1 per 5 kids)
 - 🎮 Game controller support (Xbox, PlayStation, Switch Pro, USB), 2 controllers for split screen, menus work with the D-pad
 
+## Added in v1.2
+- Country song is now a slow, heavy country-rock anthem with new original lyrics
+- ⏸ Pause menu (Esc / P / ⏸ button / controller Start): Resume, Restart, Quit, settings
+- 🔊 Music and sound-effect volume sliders + mute (start screen and pause menu)
+- 💾 Remembers choices on this computer: players, kids, Clankers, math, song, singing, volume, 3D/map
+
 ## Still to decide
 - Quick-chat phrases

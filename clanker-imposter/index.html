@@ -45,6 +45,8 @@
   #chat { text-align: left; background: rgba(0,0,0,.3); border-radius: 12px; padding: 8px 12px; min-height: 60px; font-size: 15px; }
   #chat div { margin: 4px 0; }
   .credit { font-size: 12px; opacity: .7; margin-top: 10px; }
+  .volRow { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0; font-weight: 700; }
+  .volRow input { width: 150px; accent-color: #ffcc33; }
   .inv { position: fixed; bottom: 14px; display: none; gap: 6px; align-items: center; font-size: 20px; z-index: 2; }
   .slot { position: relative; width: 50px; height: 50px; border-radius: 12px; border: 3px solid #ffcc33; background: rgba(0,0,0,.6); font-size: 26px; cursor: pointer; color: #fff; }
   .slot .k { position: absolute; top: 1px; left: 4px; font-size: 11px; font-weight: 800; color: #ffcc33; }
@@ -60,6 +62,7 @@
   <div class="pill">📓 <span id="nbText">0/15</span><span id="bar"><span id="barFill"></span></span></div>
   <div class="pill">🧒 Kids left: <span id="kidsLeft">5</span></div>
   <div class="pill">📍 <span id="roomName">Lunchroom</span></div>
+  <div class="pill" id="pauseBtn" style="pointer-events:auto;cursor:pointer">⏸ Pause</div>
   <div class="pill" id="viewBtn" style="pointer-events:auto;cursor:pointer">🗺️ Map view</div>
   <div class="pill" id="musicBtn" style="pointer-events:auto;cursor:pointer">🎵 Country</div>
   <div class="pill" id="singBtn" style="pointer-events:auto;cursor:pointer">🎤 Singing: off</div>
@@ -126,8 +129,13 @@
         <option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option>
       </select>
       <label style="font-size:15px;margin-left:8px"><input type="checkbox" id="singChk"> 🎤 robot voice sings the lyrics</label></div>
+    <div class="how" style="margin:6px 0;text-align:center">
+      <div class="volRow">🎵 Music <input type="range" min="0" max="1" step="0.05" class="musicVol"> <span class="musicPct"></span></div>
+      <div class="volRow">🔊 Sound effects <input type="range" min="0" max="1" step="0.05" class="sfxVol"> <span class="sfxPct"></span></div>
+      <label style="font-weight:700"><input type="checkbox" class="muteChk"> 🔇 Mute</label>
+    </div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v1.1 · Globex Kids · All music is original, made in code</div>
+    <div class="credit">Demo v1.2 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -185,6 +193,25 @@
   </div>
 </div>
 
+<!-- PAUSE MENU -->
+<div class="overlay" id="pauseScreen">
+  <div class="panel" style="max-width:420px">
+    <h1 style="font-size:36px">⏸ PAUSED</h1>
+    <button class="btn" id="resumeBtn" style="width:80%">▶ Resume</button><br>
+    <button class="btn" id="restartBtn" style="width:80%;background:#2980b9">🔁 Restart</button><br>
+    <button class="btn gray" id="quitBtn" style="width:80%">🚪 Quit to title</button>
+    <div class="how" style="margin-top:12px;text-align:center">
+      <div style="font-weight:800;margin-bottom:6px">⚙️ Settings</div>
+      <div class="volRow">🎵 Music <input type="range" min="0" max="1" step="0.05" class="musicVol"> <span class="musicPct"></span></div>
+      <div class="volRow">🔊 Sound effects <input type="range" min="0" max="1" step="0.05" class="sfxVol"> <span class="sfxPct"></span></div>
+      <label style="display:block;margin:6px 0;font-weight:700"><input type="checkbox" class="muteChk"> 🔇 Mute everything</label>
+      <div style="margin:6px 0">🎶 Song: <select id="pauseSong" style="font:700 16px 'Trebuchet MS';border-radius:8px"><option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option></select></div>
+      <button class="btn gray" id="pauseView" style="font-size:16px;padding:8px 16px">📷 3D / 🗺️ Map</button>
+    </div>
+    <div style="font-size:13px;opacity:.75;margin-top:6px">Press Esc or P to resume</div>
+  </div>
+</div>
+
 <!-- END -->
 <div class="overlay" id="endScreen">
   <div class="panel">
@@ -218,16 +245,25 @@ const pick = arr => arr[Math.floor(Math.random() * arr.length)];
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = randi(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
 
+// ================= SETTINGS (saved on this computer) =================
+const SET = { music: .8, sfx: .8, mute: false };
+const SAVE_KEY = 'clankerImposter.settings.v1';
+function loadSettings() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (d) Object.assign(SET, d); } catch (e) {} }
+function saveSettings() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(SET)); } catch (e) {} }
+loadSettings();
 // ================= SOUND =================
 let ac = null;
 function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+let SFXG = null;
+function sfxOut() { if (!SFXG) { SFXG = ac.createGain(); SFXG.connect(ac.destination); } SFXG.gain.value = SET.mute ? 0 : SET.sfx; return SFXG; }
+function applyVolumes() { if (SFXG) SFXG.gain.value = SET.mute ? 0 : SET.sfx; }
 function tone(freq, dur, type = 'square', vol = 0.15, slide = 0) {
   const a = audio(); if (!a) return;
   const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
   o.type = type; o.frequency.setValueAtTime(freq, t);
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur);
+  o.connect(g); g.connect(sfxOut()); o.start(t); o.stop(t + dur);
 }
 function noise(dur, vol, freq) {
   const a = audio(); if (!a) return;
@@ -235,7 +271,7 @@ function noise(dur, vol, freq) {
   for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
   const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
   f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 6;
-  g.gain.value = vol; s.buffer = buf; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+  g.gain.value = vol; s.buffer = buf; s.connect(f); f.connect(g); g.connect(sfxOut()); s.start();
 }
 const SFX = {
   clank: v => { noise(0.18, 0.9 * v, 2400); tone(180, 0.15, 'square', 0.12 * v, -60); tone(1250, 0.1, 'triangle', 0.08 * v); },
@@ -350,7 +386,7 @@ function musicTick() {
   const S = SONGS[name], sixteenth = 60 / S.bpm / 4;
   if (MUSIC.next < ac.currentTime) MUSIC.next = ac.currentTime + .05;
   while (MUSIC.next < ac.currentTime + .15) { playStep(name, MUSIC.step, MUSIC.next); MUSIC.next += sixteenth; MUSIC.step++; }
-  const target = (G && G.kids && G.kids.some(c => c.isClanker && c.hunting)) ? .12 : (G && G.paused && !G.over ? .25 : .45);
+  const target = (SET.mute ? 0 : SET.music) * ((G && G.kids && G.kids.some(c => c.isClanker && c.hunting)) ? .12 : (G && (G.paused || G.menu) && !G.over ? .25 : .45));
   MUSIC.gain.gain.setTargetAtTime(target, ac.currentTime, .3);
 }
 function musicStart() {
@@ -2421,7 +2457,7 @@ function lyricTick() {
   if (idx !== lastLyric || name !== lastLyricSong) {
     lastLyric = idx; lastLyricSong = name; el.textContent = '🎤 ' + LYRICS[name][idx];
     if (SING && window.speechSynthesis && !G.paused) {
-      try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(LYRICS[name][idx].replace(/[^\w\s',.!?-]/g, '')); u.rate = name === 'Chill' ? .85 : 1.05; u.pitch = { Country: .9, Rock: .7, Chill: 1.1, Arcade: 1.6 }[name]; u.volume = .7; speechSynthesis.speak(u); } catch (e) {}
+      try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(LYRICS[name][idx].replace(/[^\w\s',.!?-]/g, '')); u.rate = name === 'Chill' ? .85 : 1.05; u.pitch = { Country: .9, Rock: .7, Chill: 1.1, Arcade: 1.6 }[name]; u.volume = SET.mute ? 0 : .7 * SET.music; speechSynthesis.speak(u); } catch (e) {}
     }
   }
   el.style.display = 'block';
@@ -2442,9 +2478,9 @@ function padCtl(h, c) {
   if (rx) c.turn = rx;
   return c;
 }
-const OVERLAYS = ['startScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'];
+const OVERLAYS = ['pauseScreen', 'startScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'];
 function openOverlay() { return OVERLAYS.map(id => $(id)).find(el => el && el.style.display === 'flex'); }
-function focusables(ov) { return [...ov.querySelectorAll('button, select, input[type=checkbox], .card:not(.dead)')].filter(el => el.offsetParent !== null); }
+function focusables(ov) { return [...ov.querySelectorAll('button, select, input[type=checkbox], input[type=range], .card:not(.dead)')].filter(el => el.offsetParent !== null); }
 function setFocus(el) { if (PADS.focusEl) PADS.focusEl.style.outline = ''; PADS.focusEl = el; if (el) { el.style.outline = '4px solid #ffcc33'; el.style.outlineOffset = '2px'; el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } }
 function moveFocus(ov, dx, dy) {
   const els = focusables(ov); if (!els.length) return;
@@ -2458,6 +2494,7 @@ function moveFocus(ov, dx, dy) {
 }
 function pressFocus() {
   const el = PADS.focusEl; if (!el) return;
+  if (el.type === 'range') { el.value = (+el.value >= 1 ? 0 : Math.min(1, +el.value + .25)); el.dispatchEvent(new Event('input')); return; }
   if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change')); }
   else if (el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
   else el.click();
@@ -2475,7 +2512,8 @@ function pollPads(dt) {
       if (dx || dy) moveFocus(ov, dx, dy);
       if (!PADS.focusEl || !ov.contains(PADS.focusEl)) setFocus(focusables(ov)[0]);
       if (hit(0)) pressFocus();
-      if (hit(1)) { if (ov.id === 'nbScreen') closeNotebook(); else if (ov.id === 'codeScreen') closeCode(); else if (ov.id === 'quizScreen') quizKey('⌫'); }
+      if (hit(9) && ov.id === 'pauseScreen') return closePause();
+      if (hit(1)) { if (ov.id === 'pauseScreen') closePause(); else if (ov.id === 'nbScreen') closeNotebook(); else if (ov.id === 'codeScreen') closeCode(); else if (ov.id === 'quizScreen') quizKey('⌫'); }
       return;
     }
     if (PADS.focusEl) setFocus(null);
@@ -2487,17 +2525,68 @@ function pollPads(dt) {
     if (hit(3)) useItem(h, 1);                 // Y / Triangle
     if (hit(5)) useItem(h, 2);                 // RB / R1
     if (hit(8)) setMusic(MUSIC.idx + 1);       // View / Select
-    if (hit(9)) setView(VIEW === '3d' ? 'map' : '3d'); // Menu / Start
+    if (hit(9)) openPause();                    // Menu / Start = pause
   });
 }
 window.addEventListener('gamepadconnected', e => { try { toast(`🎮 Controller ${e.gamepad.index + 1} connected! Left stick = walk, right stick = look, A = solve, B = report, X/Y/RB = items`); } catch (er) {} });
 function humanAct(h, what) { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); const rt = nearReportTeacher(h); if (rt) return bullyToDetention(rt); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } }
+
+// ================= PAUSE MENU & SAVED CHOICES =================
+function syncVolUI() {
+  document.querySelectorAll('.musicVol').forEach(el => el.value = SET.music); document.querySelectorAll('.sfxVol').forEach(el => el.value = SET.sfx);
+  document.querySelectorAll('.musicPct').forEach(el => el.textContent = Math.round(SET.music * 100) + '%'); document.querySelectorAll('.sfxPct').forEach(el => el.textContent = Math.round(SET.sfx * 100) + '%');
+  document.querySelectorAll('.muteChk').forEach(el => el.checked = SET.mute);
+}
+document.querySelectorAll('.musicVol').forEach(el => el.oninput = () => { SET.music = +el.value; syncVolUI(); saveSettings(); });
+document.querySelectorAll('.sfxVol').forEach(el => el.oninput = () => { SET.sfx = +el.value; syncVolUI(); applyVolumes(); saveSettings(); });
+document.querySelectorAll('.sfxVol').forEach(el => el.onchange = () => { audio(); SFX.ding(); });
+document.querySelectorAll('.muteChk').forEach(el => el.onchange = () => { SET.mute = el.checked; syncVolUI(); applyVolumes(); saveSettings(); });
+function openPause() {
+  if (!G || G.over || G.menu) return;
+  G.menu = true; closeNotebook && G.nbOpen && null;
+  $('pauseSong').value = MUSIC.styles[MUSIC.idx]; syncVolUI();
+  $('pauseScreen').style.display = 'flex';
+  if (window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {}
+}
+function closePause() { if (!G) return; G.menu = false; $('pauseScreen').style.display = 'none'; last = performance.now(); }
+function quitToTitle() {
+  if (G && G.meeting) { clearTimeout(G.meeting.timer); clearInterval(G.meeting.timer); }
+  ['pauseScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'].forEach(id => $(id).style.display = 'none');
+  $('huntWarn').style.display = 'none'; $('sabBanner').style.display = 'none'; $('toasts').innerHTML = '';
+  ['inv0', 'inv1', 'hint0', 'hint1', 'divider', 'tag0', 'tag1', 'tint', 'mini', 'passPill', 'lyric'].forEach(id => $(id) && ($(id).style.display = 'none'));
+  G = null; $('startScreen').style.display = 'flex';
+}
+function restartGame() {
+  if (G && G.meeting) { clearTimeout(G.meeting.timer); clearInterval(G.meeting.timer); }
+  ['pauseScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'].forEach(id => $(id).style.display = 'none');
+  $('toasts').innerHTML = ''; $('huntWarn').style.display = 'none'; newGame(); setView(VIEW);
+}
+$('pauseBtn').onclick = () => openPause();
+$('resumeBtn').onclick = closePause;
+$('restartBtn').onclick = restartGame;
+$('quitBtn').onclick = quitToTitle;
+$('pauseSong').onchange = () => { setMusic(MUSIC.styles.indexOf($('pauseSong').value)); saveChoices(); };
+$('pauseView').onclick = () => { setView(VIEW === '3d' ? 'map' : '3d'); saveChoices(); };
+// remember the start-screen choices
+const CHOICE_IDS = ['playersSel', 'kidsSel', 'clankSel', 'musicSel'], CHECK_IDS = ['opAdd', 'opSub', 'opMul', 'opDiv', 'singChk'];
+function saveChoices() {
+  SET.choices = {}; CHOICE_IDS.forEach(id => SET.choices[id] = $(id).value); CHECK_IDS.forEach(id => SET.choices[id] = $(id).checked);
+  SET.choices.musicSel = MUSIC.styles[MUSIC.idx] || SET.choices.musicSel; SET.view = VIEW; SET.sing = SING; saveSettings();
+}
+(function restoreChoices() {
+  const c = SET.choices; if (c) { CHOICE_IDS.forEach(id => { if (c[id] != null) $(id).value = c[id]; }); CHECK_IDS.forEach(id => { if (c[id] != null) $(id).checked = c[id]; }); }
+  if (SET.view) VIEW = SET.view;
+  $('twoHelp').style.display = $('playersSel').value === '2' ? 'block' : 'none';
+  syncVolUI();
+})();
+['change'].forEach(ev => [...CHOICE_IDS, ...CHECK_IDS].forEach(id => $(id).addEventListener(ev, saveChoices)));
 
 // ================= LOOP =================
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   try { pollPads(dt); } catch (e) {}
+  if (G && G.menu) { render(); requestAnimationFrame(loop); return; }
   if (G) {
     G.t += dt;
     if (G.eject) updateEject(dt);
@@ -2550,6 +2639,8 @@ requestAnimationFrame(loop);
 window.addEventListener('keydown', e => {
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = true;
   if (!G) return;
+  if (G.menu) { if (k === 'Escape' || k === 'p') closePause(); return; }
+  if ((k === 'p' || (k === 'Escape' && !G.nbOpen && !G.codeOpen)) && !G.over && !G.quiz) { openPause(); return; }
   if (G.quiz) { if (/^[0-9]$/.test(e.key)) quizKey(e.key); else if (e.key === 'Backspace') quizKey('⌫'); else if (e.key === 'Enter') quizKey('✔'); return; }
   if (G.codeOpen) { if (/^[0-9]$/.test(e.key)) codeKey(e.key); else if (e.key === 'Backspace') codeKey('⌫'); else if (e.key === 'Enter') codeKey('✔'); else if (e.key === 'Escape') closeCode(); return; }
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
@@ -2563,8 +2654,8 @@ window.addEventListener('keydown', e => {
     if (k === 'Enter') act(G.humans[1], 'solve');
     if (k === 'Shift' || k === '/') act(G.humans[1], 'report');
     if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
-    if (k === 'm') setMusic(MUSIC.idx + 1);
-    if (k === 'v') setView(VIEW === '3d' ? 'map' : '3d');
+    if (k === 'm') { setMusic(MUSIC.idx + 1); saveChoices(); }
+    if (k === 'v') { setView(VIEW === '3d' ? 'map' : '3d'); saveChoices(); }
     return;
   }
   if (k === 'e' || k === ' ') { const sp = nearSpot(G.player), rt = nearReportTeacher(G.player); if (sp) useSpot(G.player, sp); else if (rt) bullyToDetention(rt); else if (nearPrincipal(G.player)) getPass(G.player); else { const n = nearNotebook(); if (n) openNotebook(n); } }
@@ -2605,7 +2696,7 @@ $('musicBtn').onclick = () => setMusic(MUSIC.idx + 1);
 $('viewBtn').onclick = () => setView(VIEW === '3d' ? 'map' : '3d');
 $('musicSel').onchange = () => setMusic(MUSIC.styles.indexOf($('musicSel').value));
 $('playersSel').onchange = () => { $('twoHelp').style.display = $('playersSel').value === '2' ? 'block' : 'none'; };
-$('playBtn').onclick = () => { audio(); SFX.ding(); setSing($('singChk').checked); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); setView(VIEW); };
+$('playBtn').onclick = () => { audio(); saveChoices(); SFX.ding(); setSing($('singChk').checked); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); setView(VIEW); };
 $('againBtn').onclick = () => { $('endScreen').style.display = 'none'; newGame(); };
 window.__game = () => G; window.__r3 = () => R3; window.__dbg = { planPath, freeze, startMeeting, playerVote, startSabotage, endSabotage, useSpot, codeKey, openCode }; // for testing
 })();
