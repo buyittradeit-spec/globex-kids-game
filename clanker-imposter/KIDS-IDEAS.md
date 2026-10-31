@@ -119,5 +119,12 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🔊 Music and sound-effect volume sliders + mute (start screen and pause menu)
 - 💾 Remembers choices on this computer: players, kids, Clankers, math, song, singing, volume, 3D/map
 
+## Added in v1.3 (launch prep)
+- 🎚️ Difficulty: Easy / Normal / Hard (hall-pass time, detention, Clanker and sabotage pace, quiz time)
+- New title screen with original logo and animated hallway; rules folded into "How to play"
+- ℹ️ About & Privacy screen (no data, no ads, no chat, local settings only) + credits
+- Promo images in /promo (YouTube thumbnail, square promo, 6 screenshots)
+- Test shortcuts removed from the live build
+
 ## Still to decide
 - Quick-chat phrases
