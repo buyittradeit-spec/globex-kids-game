@@ -45,6 +45,9 @@
   #chat { text-align: left; background: rgba(0,0,0,.3); border-radius: 12px; padding: 8px 12px; min-height: 60px; font-size: 15px; }
   #chat div { margin: 4px 0; }
   .credit { font-size: 12px; opacity: .7; margin-top: 10px; }
+  .inv { position: fixed; bottom: 14px; display: none; gap: 6px; align-items: center; font-size: 20px; z-index: 2; }
+  .slot { position: relative; width: 50px; height: 50px; border-radius: 12px; border: 3px solid #ffcc33; background: rgba(0,0,0,.6); font-size: 26px; cursor: pointer; color: #fff; }
+  .slot .k { position: absolute; top: 1px; left: 4px; font-size: 11px; font-weight: 800; color: #ffcc33; }
 </style>
 </head>
 <body>
@@ -65,6 +68,8 @@
 <div id="sabBanner" style="position:fixed;top:96px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;z-index:3;padding:8px 18px;border-radius:14px;border:3px solid #fff;font-size:17px;text-align:center;max-width:94%;animation:flash .6s infinite alternate"></div>
 <div id="toasts"></div>
 <div id="divider" style="position:fixed;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:#ffcc33;display:none;pointer-events:none;z-index:2"></div>
+<div id="inv0" class="inv" style="left:12px"></div>
+<div id="inv1" class="inv" style="left:calc(50% + 12px)"></div>
 <div id="hint0" class="pill" style="position:fixed;bottom:14px;left:25%;transform:translateX(-50%);display:none;pointer-events:none"></div>
 <div id="hint1" class="pill" style="position:fixed;bottom:14px;left:75%;transform:translateX(-50%);display:none;pointer-events:none"></div>
 <div id="tag0" class="pill" style="position:fixed;top:54px;left:8px;display:none;pointer-events:none;border-color:#3498db">🟦 PLAYER 1</div>
@@ -74,6 +79,7 @@
   <button class="act" id="emBtn" style="background:#8e44ad">🔴 MEETING</button>
   <button class="act" id="useBtn">📓 SOLVE</button>
   <button class="act" id="fixBtn" style="background:#e67e22">🔧 FIX</button>
+  <button class="act" id="tellBtn" style="background:#16a085">🗣️ TELL A TEACHER</button>
   <button class="act" id="passBtn" style="background:#f1c40f;color:#1f3a93">🎫 GET HALL PASS</button>
 </div>
 
@@ -86,7 +92,7 @@
       🏫 Your school is hidden inside a giant <b>Clanker warehouse</b>. One of the kids is secretly a <b>robot in disguise</b>, and it can <b>shapeshift</b> into anyone!<br>
       📓 Find the <b>math notebooks</b> and solve them. Get one wrong and the Clanker hears you... <b>CLANK... CLANK...</b> RUN!<br>
       🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote! Or press the <b>🔴 red button</b> in the lunchroom (once per game).<br>
-      🧑‍🏫 <b>Teachers</b> patrol the hallways. No hall pass? Get one from the <b>Principal's Office</b>!<br>🔧 The Clanker can <b>sabotage</b> the school: lights, intercom, boiler, air filters, doors, costumes. Fix it fast!<br>🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
+      🧑‍🏫 <b>Teachers</b> patrol the hallways. No hall pass? Get one from the <b>Principal's Office</b>!<br>🔧 The Clanker can <b>sabotage</b> the school: lights, intercom, boiler, air filters, doors, costumes. Fix it fast!<br>🎒 Grab <b>items</b> you find (carry 3; use with <b>1 2 3</b>). Watch out for <b>Big Brock the bully</b>! Tell a teacher if he bothers you.<br>🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
       🎮 <b>3D view:</b> W/S or ↑/↓ walk, A/D step sideways, ←/→ or drag the mouse to look. <b>Phone:</b> left thumb walks, right thumb looks.<br>Solve: <b>E</b> · Report / button: <b>R</b> · Music: <b>M</b> · Switch 3D/map: <b>V</b> or 🗺️
     </div>
     <div class="ops" style="margin-top:10px">
@@ -114,7 +120,7 @@
         <option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option>
       </select></div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v0.8 · Globex Kids · All music is original, made in code</div>
+    <div class="credit">Demo v0.9 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -529,7 +535,7 @@ function newGame() {
     }
   });
   G = { twoP, humans, emCool: 12, kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
-  initExtras();
+  initExtras(); initItems();
   teleportToLunch();
   updateHud();
   setTimeout(() => toast(twoP ? '🔴 The emergency button is in the Lunchroom. Each player can press it once!' : '🔴 The emergency button is in the Lunchroom. You can press it once!'), 800);
@@ -638,6 +644,8 @@ function isolated(victim, c) {
   return living().every(j => j === c || j === victim || j.isClanker || (!sees(j, c) && !sees(j, victim))) && (G.teachers || []).every(t => !sees(t, c) && !sees(t, victim));
 }
 function clankerThink(c, dt) {
+  if (c.stopT > 0) { c.stopT -= dt; return; }
+  if (c.lured > 0) { c.lured -= dt; if (c.path.length) { followPath(c, dt, 120); return; } }
   c.cool -= dt; c.shiftCd -= dt;
   // shapeshift
   if (c.disguise) { c.disguiseT -= dt; if (c.disguiseT <= 0) { puff(c); c.disguise = null; } }
@@ -660,7 +668,7 @@ function clankerThink(c, dt) {
   // normal freeze attempts
   if (c.cool <= 0) {
     if (!c.target || c.target.state !== 'alive') {
-      const cands = living().filter(k => !k.isClanker && isolated(k, c) && dist(k, c) < 900).sort((a, b) => dist(a, c) - dist(b, c));
+      const cands = living().filter(k => !k.isClanker && !(k.isPlayer && hidden(k)) && isolated(k, c) && dist(k, c) < 900).sort((a, b) => dist(a, c) - dist(b, c));
       if (cands.length) { c.target = cands[0]; c.chaseT = 0; c.task = null; c.solveT = 0; c.wait = 0; }
     }
     if (c.target) {
@@ -725,7 +733,7 @@ function moveHuman(p, dt) {
     dx = fx * c.fwd - fy * c.str; dy = fy * c.fwd + fx * c.str;
   } else { dx = c.ax; dy = c.ay; if (Math.abs(dx) > 0.1) p.face = dx > 0 ? 1 : -1; }
   const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
-  const sp = (VIEW === '3d' && R3 ? (p.state === 'alive' ? 145 : 165) : (p.state === 'alive' ? 150 : 170)) * dt;
+  const sp = (VIEW === '3d' && R3 ? (p.state === 'alive' ? 145 : 165) : (p.state === 'alive' ? 150 : 170)) * dt * (p.speedT > 0 ? 1.6 : 1);
   if (p.state === 'ghost') { p.x = Math.max(160, Math.min(2230, p.x + dx * sp)); p.y = Math.max(130, Math.min(2610, p.y + dy * sp)); stairsHop(p); }
   else moveEnt(p, dx * sp, dy * sp);
   p.moving = m > 0.1;
@@ -768,7 +776,8 @@ function submitAnswer() {
     $('nbMsg').textContent = `Oops! The answer was ${prob.r}.` + (own.state === 'alive' && c ? ` The Clanker heard ${G.twoP ? 'Player ' + (own.pi + 1) : 'you'}... RUN! 🔊` : '');
     setTimeout(() => {
       closeNotebook();
-      if (own.state === 'alive' && c && c.state === 'alive' && !G.over) {
+      if (G.hushT > 0) { toast('📼 The Hush Tape kept the Clankers from hearing you!'); return; }
+      if (own.state === 'alive' && c && c.state === 'alive' && !G.over && !hidden(own)) {
         c.huntTarget = own; c.hunting = true; c.huntT = 11; c.replanT = 0; c.clankT = 0; c.target = null; c.task = null; c.solveT = 0; c.wait = 0;
         $('huntWarn').style.display = 'block'; $('huntWarn').textContent = G.twoP ? `🔊 CLANK... CLANK... RUN, PLAYER ${own.pi + 1}!` : '🔊 CLANK... CLANK... RUN!';
       }
@@ -1244,6 +1253,12 @@ function drawWorld() {
     ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(ax, 480, 12, 0, 6.3); ctx.fill();
     ctx.strokeStyle = '#555'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + dir * 14, ey - 10); ctx.moveTo(ex, ey); ctx.lineTo(ex + dir * 14, ey + 10); ctx.stroke(); ctx.lineCap = 'butt';
   }
+  // items on the floor
+  ctx.font = '18px sans-serif'; ctx.textAlign = 'center';
+  for (const f of G.floorItems) { const bob = Math.sin(G.t * 3 + f.id * 10) * 2; ctx.fillStyle = 'rgba(255,230,80,.35)'; ctx.beginPath(); ctx.arc(f.x, f.y, 14, 0, 6.3); ctx.fill(); ctx.fillText(ITEMS[f.type].e, f.x, f.y + 6 + bob); }
+  for (const a of G.alarms) { ctx.fillText('⏰', a.x, a.y + 6); if (a.ringing) { ctx.strokeStyle = `rgba(255,80,80,${.5 + Math.sin(G.t * 20) * .5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(a.x, a.y, 22 + (G.t * 40) % 20, 0, 6.3); ctx.stroke(); } }
+  for (const v of VENDING) { ctx.fillStyle = '#c0392b'; ctx.fillRect(v.x - 15, v.y - 12, 30, 24); ctx.fillStyle = '#85c1e9'; ctx.fillRect(v.x - 11, v.y - 8, 14, 16); ctx.fillStyle = '#fff'; ctx.font = 'bold 8px Trebuchet MS'; ctx.fillText('SNACKS', v.x, v.y + 20); }
+  for (const w of G.wedges) { ctx.fillStyle = '#8e5a2b'; ctx.fillRect(w.wall.x, w.wall.y - 3, w.wall.w, w.wall.h + 6); }
   // hall pass desk
   ctx.fillStyle = '#6e4a2a'; ctx.fillRect(PASS_DESK.x - 22, PASS_DESK.y - 12, 44, 24); ctx.fillStyle = '#f1c40f'; ctx.fillRect(PASS_DESK.x - 12, PASS_DESK.y - 7, 10, 14); ctx.fillRect(PASS_DESK.x + 2, PASS_DESK.y - 7, 10, 14);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillText('🎫 HALL PASSES', PASS_DESK.x, PASS_DESK.y + 24);
@@ -1326,8 +1341,14 @@ function drawView2D(p, vx, vw, s) {
   drawWorld();
   G.statues.forEach(st => { if (canSee(st)) drawStatue(st); });
   const mix = sabOn('mixup');
-  const ents = [...G.kids.filter(k => k.state !== 'out' && (k === p || canSee(k))), ...G.teachers.filter(t => canSee(t))].sort((a, b) => a.y - b.y);
+  const ents = [...G.kids.filter(k => k.state !== 'out' && (k === p || canSee(k))), ...G.teachers.filter(t => canSee(t)), ...(canSee(G.bully) ? [G.bully] : [])].sort((a, b) => a.y - b.y);
   ents.forEach(k => {
+    if (k.isBully) {
+      ctx.save(); ctx.translate(k.x, k.y); ctx.scale(1.2, 1.2); drawKid(0, 0, k.color, 1, '😠 Big Brock', k.face, G.t + 3, k.mv); ctx.restore();
+      if (k.sayT > 0) { ctx.font = 'bold 11px Trebuchet MS'; const tw = ctx.measureText(k.say).width + 14; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(k.x - tw / 2, k.y - 60, tw, 20, 8); ctx.fill(); ctx.fillStyle = '#c0392b'; ctx.textAlign = 'center'; ctx.fillText(k.say, k.x, k.y - 46); }
+      return;
+    }
+    if (k.isPlayer && hidden(k) && k !== p) return;
     if (k.isTeacher) {
       ctx.save(); ctx.translate(k.x, k.y); ctx.scale(1.3, 1.3); drawKid(0, 0, k.color, 1, k.name, k.face, G.t + k.id, k.mv); ctx.restore();
       if (k.sayT > 0) { ctx.font = 'bold 11px Trebuchet MS'; const tw = ctx.measureText(k.say).width + 14; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(k.x - tw / 2, k.y - 64, tw, 20, 8); ctx.fill(); ctx.fillStyle = '#222'; ctx.textAlign = 'center'; ctx.fillText(k.say, k.x, k.y - 50); }
@@ -1439,6 +1460,11 @@ function kidTexture(color, frame, robot) {
     ctx.restore(); ctx = save; NOBLINK = false;
   });
   const t = new THREE.CanvasTexture(c); R3.kt[key] = t; return t;
+}
+function itemTexture(e) {
+  const key = 'item:' + e; if (R3.lt[key]) return R3.lt[key];
+  const c = mkCanvas(64, 64, x => { x.font = '46px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(e, 32, 36); });
+  return R3.lt[key] = new THREE.CanvasTexture(c);
 }
 function bubbleTexture(text) {
   const key = 'bub:' + text; if (R3.lt[key]) return R3.lt[key];
@@ -1610,6 +1636,8 @@ function init3D() {
   box(PASS_DESK.x - 22, PASS_DESK.y - 12, 44, 24, 28, col(0x6e4a2a));
   for (let i = 0; i < 3; i++) box(PASS_DESK.x - 14 + i * 9, PASS_DESK.y - 6, 7, 11, 1 + i * .01, col(0xf1c40f), 28 + i * .6);
   plane(tex(256, 48, (c, w, h) => { c.fillStyle = '#f1c40f'; c.fillRect(0, 0, w, h); c.fillStyle = '#1f3a93'; c.font = 'bold 26px Trebuchet MS'; c.textAlign = 'center'; c.fillText('🎫 HALL PASSES', w / 2, 33); }), PASS_DESK.x, PASS_DESK.y + 12.3, 40, 8, 22, 'S');
+  // vending machines
+  for (const v of VENDING) { box(v.x - 16, v.y - 12, 32, 24, 76, col(0xc0392b)); const gl2 = new THREE.MeshBasicMaterial({ color: 0x85c1e9 }); box(v.x - 12, v.y + 12, 18, 1, 44, gl2, 20); plane(tex(128, 32, (c, w, h) => { c.fillStyle = '#fff'; c.font = 'bold 22px Trebuchet MS'; c.textAlign = 'center'; c.fillText('SNACKS', w / 2, 24); }), v.x, v.y + 12.6, 26, 6, 70, 'S'); }
   // detention chairs
   for (const d of DET_SEATS) { box(d.x - 12, d.y - 12, 24, 24, 3, col(0x922b21), 15); box(d.x - 14, d.y - 12, 3, 24, 22, col(0x922b21), 15); box(d.x - 10, d.y - 10, 3, 3, 15, metal); box(d.x + 7, d.y + 7, 3, 3, 15, metal); }
   plane(tex(256, 48, (c, w, h) => { c.fillStyle = '#922b21'; c.fillRect(0, 0, w, h); c.fillStyle = '#fff'; c.font = 'bold 28px Trebuchet MS'; c.textAlign = 'center'; c.fillText('⏰ DETENTION', w / 2, 34); }), 1607.6, 1045, 50, 10, 70, 'E');
@@ -1758,6 +1786,8 @@ function build3DGame() {
   const d = R3.dyn; while (d.children.length) d.remove(d.children[0]);
   const spr = (t, w, h, extra) => { const s = new THREE.Sprite(new THREE.SpriteMaterial(Object.assign({ map: t, transparent: true, alphaTest: .05 }, extra || {}))); s.scale.set(w, h, 1); d.add(s); return s; };
   G.kids.forEach(k => { k.lbl = spr(labelTexture(k.name), 30, 6); k.lblKey = ''; k.mdl = null; k.mdlKey = ''; });
+  { const bb = G.bully; bb.mdl = kidModel(bb.look, { scale: 1.3 }); d.add(bb.mdl.g); bb.lbl = spr(labelTexture('😠 Big Brock'), 34, 7); bb.bub = spr(labelTexture(''), 50, 9); bb.bubKey = ''; }
+  G.items3 = new Map(); G.alarm3 = new Map(); G.wedge3 = new Map();
   G.teachers.forEach(t => { t.mdl = kidModel(t.look, { adult: true }); d.add(t.mdl.g); t.lbl = spr(labelTexture('🧑‍🏫 ' + t.name), 34, 7); t.bub = spr(labelTexture(''), 44, 9); t.bubKey = ''; });
   G.notebooks.forEach(n => { n.glow = spr(R3.glowTex, 34, 34, { depthWrite: false, blending: THREE.AdditiveBlending, alphaTest: 0 }); n.spr = spr(R3.nbTex, 14, 19); });
   G.statues3 = new Map();
@@ -1793,6 +1823,17 @@ function update3D(p, vx, vw) {
     t.bub.visible = t.sayT > 0;
     if (t.sayT > 0) { if (t.bubKey !== t.say) { t.bub.material.map = bubbleTexture(t.say); t.bubKey = t.say; } t.bub.position.set(t.x, hOf(t) + 92, zOf(t.y)); }
   });
+  // Big Brock
+  { const bb = G.bully; poseModel(bb.mdl, bb, 0, p); bb.lbl.position.set(bb.x, hOf(bb) + 82, zOf(bb.y)); bb.bub.visible = bb.sayT > 0; if (bb.sayT > 0) { if (bb.bubKey !== bb.say) { bb.bub.material.map = bubbleTexture(bb.say); bb.bubKey = bb.say; } bb.bub.position.set(bb.x, hOf(bb) + 94, zOf(bb.y)); } }
+  // other player hidden in chalk cloud
+  G.humans.forEach(h => { if (h !== p && h.mdl) { const hid = hidden(h); h.mdl.g.visible = h.mdl.g.visible && !hid; h.lbl.visible = h.lbl.visible && !hid; } });
+  // items on the floor
+  for (const f of G.floorItems) if (!G.items3.has(f)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: itemTexture(ITEMS[f.type].e), transparent: true })); sp.scale.set(14, 14, 1); const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: R3.glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.scale.set(26, 26, 1); R3.dyn.add(sp); R3.dyn.add(gl); G.items3.set(f, [sp, gl]); }
+  for (const [f, arr] of G.items3) { if (!G.floorItems.includes(f)) { arr.forEach(o => R3.dyn.remove(o)); G.items3.delete(f); continue; } const y = baseOf(f.y) + 14 + Math.sin(G.t * 3 + f.id * 10) * 2; arr.forEach(o => o.position.set(f.x, y, zOf(f.y))); }
+  for (const a of G.alarms) if (!G.alarm3.has(a)) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: itemTexture('⏰'), transparent: true })); sp.scale.set(12, 12, 1); sp.position.set(a.x, hOf(a) + 7, zOf(a.y)); R3.dyn.add(sp); G.alarm3.set(a, sp); }
+  for (const [a, sp] of G.alarm3) { if (!G.alarms.includes(a)) { R3.dyn.remove(sp); G.alarm3.delete(a); continue; } if (a.ringing) sp.position.y = hOf(a) + 7 + Math.abs(Math.sin(G.t * 30)) * 3; }
+  for (const w of G.wedges) if (!G.wedge3.has(w)) { const m = new THREE.Mesh(new THREE.BoxGeometry(w.wall.w, 100, 8), new THREE.MeshLambertMaterial({ color: 0x8e5a2b })); m.position.set(w.wall.x + w.wall.w / 2, baseOf(w.wall.y) + 50, zOf(w.wall.y) + w.wall.h / 2); R3.dyn.add(m); G.wedge3.set(w, m); }
+  for (const [w, m] of G.wedge3) if (!G.wedges.includes(w)) { R3.dyn.remove(m); G.wedge3.delete(w); }
   // tick the wall clocks (real time)
   const now = new Date(); if (now.getSeconds() !== R3.clockSec) { R3.clockSec = now.getSeconds(); const c = R3.clockCan.getContext('2d'); c.clearRect(0, 0, 128, 128);
     c.fillStyle = '#fdfefe'; c.strokeStyle = '#1b2631'; c.lineWidth = 9; c.beginPath(); c.arc(64, 64, 58, 0, 6.3); c.fill(); c.stroke();
@@ -1910,11 +1951,11 @@ function updateTeachers(dt) {
       followPath(t, dt, 72, () => { t.wait = rand(1, 3); });
     }
     for (const h of G.humans) {
-      if (h.state !== 'alive' || h.stopT > 0 || h.detT > 0 || h.passClock > 0 || t.cd[h.pi] > 0) continue;
-      if (!HALL_KEYS.includes(areaAt(h.x, h.y).key) || dist(t, h) > 78) continue;
+      if (h.state !== 'alive' || h.stopT > 0 || h.detT > 0 || h.passClock > 0 || t.cd[h.pi] > 0 || hidden(h)) continue;
+      if (!HALL_KEYS.includes(areaAt(h.x, h.y).key) || dist(t, h) > (h.quietT > 0 ? 30 : 78)) continue;
       t.cd[h.pi] = 9; t.stopT = 1.6; t.face = h.x > t.x ? 1 : -1; t.hd = Math.atan2(h.y - t.y, h.x - t.x);
       if (h.passT > 0) { t.say = pick(['Thanks! 👍', 'Walk, don\'t run!', 'Carry on! 📋']); t.sayT = 2; continue; }
-      t.say = 'Hall pass, please! 🎫'; t.sayT = 3; h.stopT = 1.8; SFX.ding();
+      t.say = 'Hall pass, please! 🎫'; t.sayT = 3; h.stopT = h.bootsT > 0 ? 0 : 1.8; SFX.ding();
       h.needPass = true; h.passClock = 10;
       toast(`🧑‍🏫 ${t.name}: "${G.twoP ? 'Player ' + (h.pi + 1) + ', h' : 'H'}all pass, please! You have 10 seconds to get one from the Principal's Office, or it's DETENTION!"`);
     }
@@ -2053,6 +2094,157 @@ function codeKey(k) {
 }
 function closeCode() { G.codeOpen = false; $('codeScreen').style.display = 'none'; }
 
+// ================= ITEMS (original Globex Kids items) & BIG BROCK THE BULLY =================
+const ITEMS = {
+  pretzel:  { e: '⚡', name: 'Power Pretzel',   tip: 'Run 60% faster for 10 seconds' },
+  wedge:    { e: '🚪', name: 'Door Wedge',      tip: 'Jam the nearest door shut for 15 seconds' },
+  keys:     { e: '🔑', name: "Janitor's Keys",  tip: 'Unlock doors the Clanker locked' },
+  fizz:     { e: '🥤', name: 'Fizz Pop',        tip: 'Spray Clankers, the bully and teachers away' },
+  money:    { e: '🪙', name: 'Lunch Money',     tip: 'Buy a Power Pretzel at a vending machine' },
+  tape:     { e: '📼', name: 'Hush Tape',       tip: "Clankers can't hear wrong answers for 30 seconds" },
+  alarm:    { e: '⏰', name: 'Wind-Up Alarm',   tip: 'Drop it: it rings and lures Clankers & the bully' },
+  chalk:    { e: '🧽', name: 'Chalk Cloud',     tip: 'Hide from Clankers, teachers & the bully for 10 s' },
+  scissors: { e: '✂️', name: 'Safety Scissors', tip: 'Instantly fix the sabotage panel you stand at' },
+  boots:    { e: '👢', name: 'Stompy Boots',    tip: "The bully can't shove you, teachers can't stop you (20 s)" },
+  apple:    { e: '🍎', name: 'Shiny Apple',     tip: 'Stop a Clanker chasing you, or cancel the hall-pass timer' },
+};
+const ITEM_KEYS = Object.keys(ITEMS);
+const VENDING = [{ x: 925, y: 150, label: 'Lunchroom' }, { x: 2010, y: 2540, label: "Teachers' Lounge" }];
+const BULLY_LOOK = { color: '#e67e22a', hair: '#1a1a1a', skin: '#d4a373', style: 3, pants: '#1b2631', blink: .6 };
+BULLY_LOOK.color = '#d35400'; LOOKS['#d35400'] = BULLY_LOOK;
+const BULLY_ZONES = ['hall', 'hall2', 'conn'];
+const BULLY_DET = { x: 2020, y: 1190 };
+function spawnItem() {
+  const rooms = ROOM_KEYS.filter(k => k !== 'warehouse');
+  const A = AREAS[pick(rooms)], p = randPointIn(A);
+  if (G.floorItems.some(f => dist(f, p) < 60) || G.notebooks.some(n => dist(n, p) < 40)) return;
+  G.floorItems.push({ x: p.x, y: p.y, type: pick(ITEM_KEYS), id: Math.random() });
+}
+function initItems() {
+  G.floorItems = []; for (let i = 0; i < 40 && G.floorItems.length < 18; i++) spawnItem();
+  G.itemCd = 25; G.alarms = []; G.wedges = []; G.hushT = 0;
+  G.humans.forEach(h => { h.inv = []; h.speedT = 0; h.hiddenT = 0; h.bootsT = 0; h.quietT = 0; h.bulliedT = 0; });
+  G.bully = { name: 'Big Brock', look: BULLY_LOOK, color: BULLY_LOOK.color, x: 1300, y: 460, r: 16, state: 'alive', path: [], wait: 2, task: null, solveT: 0, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, id: 40, cd: 6, detT: 0, stopT: 0, say: '', sayT: 0, isBully: true };
+}
+const hidden = h => h.hiddenT > 0;
+function nearVending(h) { return VENDING.find(v => dist(v, h) < 60); }
+function nearReportTeacher(h) { if (!(h.bulliedT > 0) || G.bully.detT > 0) return null; return G.teachers.find(t => dist(t, h) < 80); }
+function bullyToDetention(byWho) {
+  const b = G.bully; b.detT = 40; b.x = BULLY_DET.x; b.y = BULLY_DET.y; b.path = []; b.stopT = 0;
+  byWho.say = pick(["That's not how we treat people!", 'Detention, Brock!', 'No bullying in my school!']); byWho.sayT = 3;
+  toast(`🧑‍🏫 ${byWho.name}: "${byWho.say}" Big Brock got 40 seconds of detention. 👏`); SFX.ding();
+  G.humans.forEach(h => h.bulliedT = 0);
+}
+function updateItems(dt) {
+  G.itemCd -= dt; if (G.itemCd <= 0) { G.itemCd = 25; if (G.floorItems.length < 18) spawnItem(); }
+  G.hushT -= dt;
+  for (const h of G.humans) {
+    ['speedT', 'hiddenT', 'bootsT', 'quietT', 'bulliedT'].forEach(k => { if (h[k] > 0) h[k] -= dt; });
+    if (h.state !== 'alive') continue;
+    for (const f of G.floorItems) if (dist(f, h) < 30 && h.inv.length < 3) {
+      h.inv.push(f.type); f.taken = true; SFX.ding();
+      toast(`${ITEMS[f.type].e} ${G.twoP ? 'Player ' + (h.pi + 1) + ' picked up' : 'Picked up'} ${ITEMS[f.type].name}: ${ITEMS[f.type].tip}`);
+    }
+  }
+  G.floorItems = G.floorItems.filter(f => !f.taken);
+  G.wedges = G.wedges.filter(w => { w.t -= dt; if (w.t <= 0) { const i = WALLS.indexOf(w.wall); if (i >= 0) WALLS.splice(i, 1); return false; } return true; });
+  G.alarms = G.alarms.filter(a => {
+    a.t -= dt;
+    if (a.t <= 0 && !a.ringing) { a.ringing = true; toast('⏰ BRRRING! The alarm is ringing and luring Clankers away!'); [...aliveClankers(), G.bully].forEach(e => { if (e.detT > 0) return; e.hunting = false; e.huntTarget = null; e.target = null; e.cool = Math.max(e.cool || 0, 6); e.path = planPath(e, a); e.wait = 0; e.lured = 5; }); }
+    if (a.ringing) { a.ring = (a.ring || 0) - dt; if (a.ring <= 0) { a.ring = .25; tone(1800 + Math.random() * 300, .12, 'square', .07); } }
+    return a.t > -5;
+  });
+  // ----- Big Brock -----
+  const b = G.bully; b.sayT -= dt; b.cd -= dt;
+  if (b.detT > 0) { b.detT -= dt; b.x = BULLY_DET.x; b.y = BULLY_DET.y; if (b.detT <= 0) { b.x = 1300; b.y = 460; b.path = []; toast('😠 Big Brock is out of detention...'); } return; }
+  if (b.stopT > 0) { b.stopT -= dt; return; }
+  if (b.lured > 0) { b.lured -= dt; if (b.path.length) { followPath(b, dt, 95); return; } }
+  const prey = G.humans.filter(h => h.state === 'alive' && !hidden(h) && h.detT <= 0 && HALL_KEYS.includes(areaAt(h.x, h.y).key) && dist(h, b) < 240).sort((x, y) => dist(x, b) - dist(y, b))[0];
+  if (prey && b.cd <= 0) {
+    b.replanT = (b.replanT || 0) - dt; if (b.replanT <= 0) { b.path = planPath(b, prey); b.replanT = .5; }
+    followPath(b, dt, 105);
+    if (dist(b, prey) < 42) {
+      b.cd = 22; b.stopT = 1.5; b.hd = Math.atan2(prey.y - b.y, prey.x - b.x); prey.bulliedT = 25; b.path = [];
+      const who = G.twoP ? 'Player ' + (prey.pi + 1) : 'you';
+      if (prey.inv.length) {
+        const it = prey.inv.splice(Math.floor(Math.random() * prey.inv.length), 1)[0];
+        b.say = `Gimme that ${ITEMS[it].name}!`; b.sayT = 2.5;
+        toast(`😠 Big Brock took ${G.twoP ? who + "'s" : 'your'} ${ITEMS[it].e} ${ITEMS[it].name}! Tell a teacher!`);
+      } else if (prey.bootsT > 0) { b.say = 'Whoa, nice boots...'; b.sayT = 2; toast('👢 Your Stompy Boots kept Big Brock from shoving you!'); }
+      else {
+        b.say = 'Nothing?! Get outta here!'; b.sayT = 2.5;
+        const dx = prey.x - b.x, dy = prey.y - b.y, d = Math.hypot(dx, dy) || 1;
+        for (let i = 0; i < 24; i++) moveEnt(prey, dx / d * 5, dy / d * 5);
+        prey.stopT = .8; SFX.buzz();
+        toast(`😠 Big Brock shoved ${who} back! Tell a teacher!`);
+      }
+      const seer = G.teachers.find(t => !t.stay && dist(t, b) < 200 && areaAt(t.x, t.y) === areaAt(b.x, b.y));
+      if (seer) setTimeout(() => G && G.bully.detT <= 0 && bullyToDetention(seer), 900);
+    }
+    return;
+  }
+  if (b.wait > 0) { b.wait -= dt; return; }
+  if (!b.path.length) b.path = planPath(b, randPointIn(AREAS[pick(BULLY_ZONES)]));
+  followPath(b, dt, 70, () => { b.wait = rand(1, 3); });
+}
+function useItem(h, slot) {
+  if (!h || h.state !== 'alive' || G.paused || G.over) return;
+  const it = h.inv[slot]; if (!it) return;
+  const who = G.twoP ? 'Player ' + (h.pi + 1) : 'You';
+  let used = true;
+  if (it === 'pretzel') { h.speedT = 10; toast(`⚡ ${who}: super speed for 10 seconds!`); }
+  else if (it === 'wedge') {
+    const A = ROOM_KEYS.map(k => AREAS[k]).filter(A => A.key !== 'warehouse').map(A => ({ A, d: Math.hypot(A.door - h.x, (A.side === 'b' ? A.y2 : A.y1) - h.y) })).sort((a, b) => a.d - b.d)[0];
+    if (A && A.d < 150) { const half = A.A.half || (A.A.key === 'lunch' ? 55 : 42), wy = A.A.side === 'b' ? A.A.y2 : A.A.y1; const wall = { x: A.A.door - half, y: wy - T / 2, w: half * 2, h: T, wedge: true }; WALLS.push(wall); G.wedges.push({ wall, t: 15 }); toast(`🚪 ${A.A.name} door jammed for 15 seconds!`); }
+    else { used = false; toast('🚪 Stand next to a door to jam it.'); }
+  }
+  else if (it === 'keys') {
+    const near = G.lockedWall && Math.hypot(G.lockedWall.x + G.lockedWall.w / 2 - h.x, G.lockedWall.y - h.y) < 220;
+    if (near) endSabotage('🔑 Unlocked with the Janitor\'s Keys!');
+    else { const w = G.wedges.find(w => Math.hypot(w.wall.x + w.wall.w / 2 - h.x, w.wall.y - h.y) < 160); if (w) { w.t = 0; toast('🔑 Door unjammed!'); } else { used = false; toast('🔑 No locked door nearby.'); } }
+  }
+  else if (it === 'fizz') {
+    const fx = Math.cos(h.yaw || 0), fy = Math.sin(h.yaw || 0); let hit = 0;
+    [...aliveClankers(), G.bully, ...G.teachers.filter(t => !t.stay)].forEach(e => {
+      const dx = e.x - h.x, dy = e.y - h.y, d = Math.hypot(dx, dy); if (d > 170 || e.detT > 0) return;
+      if (VIEW === '3d' && R3 && d > 30 && (dx * fx + dy * fy) / d < .2) return;
+      for (let i = 0; i < 30; i++) moveEnt(e, dx / (d || 1) * 6, dy / (d || 1) * 6);
+      e.hunting = false; e.huntTarget = null; e.target = null; e.path = []; e.stopT = 1.5; e.wait = 1.5; hit++;
+    });
+    noise(.5, .5, 3000); toast(hit ? `🥤 FSSSHHH! ${who} sprayed ${hit} away!` : '🥤 FSSSHHH! (nobody was close enough)');
+  }
+  else if (it === 'money') { const v = nearVending(h); if (v) { h.inv[slot] = 'pretzel'; SFX.ding(); toast('🪙 Bought a ⚡ Power Pretzel from the vending machine!'); return; } used = false; toast('🪙 Find a vending machine (Lunchroom or Teachers\' Lounge).'); }
+  else if (it === 'tape') { G.hushT = 30; clankers().forEach(c => { c.hunting = false; c.huntTarget = null; }); $('huntWarn').style.display = 'none'; toast('📼 Hush Tape! Clankers can\'t hear wrong answers for 30 seconds.'); }
+  else if (it === 'alarm') { G.alarms.push({ x: h.x, y: h.y, t: 3 }); toast('⏰ Alarm set! It rings in 3 seconds. Get away from it!'); }
+  else if (it === 'chalk') { h.hiddenT = 10; clankers().forEach(c => { if (c.huntTarget === h || c.target === h) { c.hunting = false; c.huntTarget = null; c.target = null; } }); toast(`🧽 POOF! ${who} vanished in a chalk cloud for 10 seconds.`); for (let i = 0; i < 24; i++) G.parts.push({ x: h.x, y: h.y, vx: rand(-60, 60), vy: rand(-60, 60), t: rand(.6, 1.2), c: '#fdfefe', big: true }); }
+  else if (it === 'scissors') {
+    const sp = nearSpot(h);
+    if (sp && G.sab.type !== 'boiler') { if (G.sab.type === 'air') { G.sab.done[sp] = true; if (G.sab.done.airA && G.sab.done.airB) endSabotage('✂️ Snip snip! Air filters fixed!'); else toast(`✂️ Snip! ${SPOTS[sp].label} fixed!`); } else endSabotage('✂️ Snip snip! Fixed it!'); }
+    else { used = false; toast(sp ? '✂️ The boiler needs two kids, not scissors!' : '✂️ Stand at a sabotage panel to use these.'); }
+  }
+  else if (it === 'boots') { h.bootsT = 20; toast('👢 Stompy Boots on for 20 seconds!'); }
+  else if (it === 'apple') {
+    const c = hunterOf(h);
+    if (c) { c.hunting = false; c.huntTarget = null; c.stopT = 6; c.wait = 6; c.cool = Math.max(c.cool, 8); $('huntWarn').style.display = 'none'; toast('🍎 The Clanker stopped to stare at the shiny apple...'); }
+    else if (h.passClock > 0) { h.passClock = 0; h.needPass = false; h.passT = 45; toast('🍎 The teacher loved the apple! No hall pass needed for 45 seconds.'); }
+    else { used = false; toast('🍎 Save it for a teacher or a chasing Clanker!'); }
+  }
+  if (used) { h.inv.splice(slot, 1); }
+  invHud();
+}
+function invHud() {
+  if (!G) return;
+  [0, 1].forEach(pi => {
+    const el = $('inv' + pi), h = G.humans[pi];
+    if (!h) { el.style.display = 'none'; return; }
+    el.style.display = 'flex';
+    const keysTxt = G.twoP ? (pi === 0 ? ['1', '2', '3'] : ['8', '9', '0']) : ['1', '2', '3'];
+    el.innerHTML = [0, 1, 2].map(i => { const it = h.inv[i]; return `<button class="slot" data-pi="${pi}" data-i="${i}" title="${it ? ITEMS[it].name + ': ' + ITEMS[it].tip : 'empty'}"><span class="k">${keysTxt[i]}</span>${it ? ITEMS[it].e : ''}</button>`; }).join('') +
+      (h.speedT > 0 ? ' ⚡' : '') + (h.hiddenT > 0 ? ' 🧽' : '') + (h.bootsT > 0 ? ' 👢' : '') + (G.hushT > 0 ? ' 📼' : '');
+    el.querySelectorAll('.slot').forEach(b => b.onclick = () => useItem(G.humans[+b.dataset.pi], +b.dataset.i));
+  });
+}
+
 // ================= LOOP =================
 let last = performance.now();
 function loop(now) {
@@ -2062,7 +2254,7 @@ function loop(now) {
     if (G.eject) updateEject(dt);
     else if (!G.paused && !G.nbOpen && !G.codeOpen) {
       playerMove(dt);
-      updateTeachers(dt); updateSabotage(dt);
+      updateTeachers(dt); updateSabotage(dt); updateItems(dt);
       if (G.over) { render(); requestAnimationFrame(loop); return; }
       G.kids.forEach(k => {
         if (k.isPlayer || k.state === 'out') return;
@@ -2082,21 +2274,22 @@ function loop(now) {
         $('useBtn').style.display = nearNotebook() && !nearSpot(G.player) ? 'block' : 'none';
         $('fixBtn').style.display = nearSpot(G.player) ? 'block' : 'none';
         $('passBtn').style.display = nearPrincipal(G.player) ? 'block' : 'none';
+        $('tellBtn').style.display = nearReportTeacher(G.player) ? 'block' : 'none';
         $('reportBtn').style.display = nearStatue() ? 'block' : 'none';
         $('emBtn').style.display = nearEmButton() ? 'block' : 'none';
         $('hint0').style.display = $('hint1').style.display = 'none';
       } else {
         $('useBtn').style.display = $('reportBtn').style.display = $('emBtn').style.display = 'none';
         G.humans.forEach(h => { const keysTxt = h.pi === 0 ? ['F', 'G'] : ['Enter', 'Shift']; const t = [];
-          if (nearSpot(h)) t.push(`${keysTxt[0]}: 🔧 Fix`); else if (nearPrincipal(h)) t.push(`${keysTxt[0]}: 🎫 Get pass`); else if (nearNotebook(h)) t.push(`${keysTxt[0]}: 📓 Solve`); if (nearStatue(h)) t.push(`${keysTxt[1]}: 🚨 Report`); else if (nearEmButton(h)) t.push(`${keysTxt[1]}: 🔴 Meeting`);
+          if (nearSpot(h)) t.push(`${keysTxt[0]}: 🔧 Fix`); else if (nearReportTeacher(h)) t.push(`${keysTxt[0]}: 🗣️ Tell teacher`); else if (nearPrincipal(h)) t.push(`${keysTxt[0]}: 🎫 Get pass`); else if (nearNotebook(h)) t.push(`${keysTxt[0]}: 📓 Solve`); if (nearStatue(h)) t.push(`${keysTxt[1]}: 🚨 Report`); else if (nearEmButton(h)) t.push(`${keysTxt[1]}: 🔴 Meeting`);
           const el = $('hint' + h.pi); el.textContent = t.join('   '); el.style.display = t.length ? 'block' : 'none'; });
       }
       if (G.humans.some(h => h.moving) || Math.random() < .05) roomHud();
-    } else { $('useBtn').style.display = 'none'; $('fixBtn').style.display = 'none'; $('passBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; $('emBtn').style.display = 'none'; $('hint0').style.display = $('hint1').style.display = 'none'; }
+    } else { $('useBtn').style.display = 'none'; $('fixBtn').style.display = 'none'; $('passBtn').style.display = 'none'; $('tellBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; $('emBtn').style.display = 'none'; $('hint0').style.display = $('hint1').style.display = 'none'; }
     G.fx.forEach(f => f.t -= dt); G.fx = G.fx.filter(f => f.t > 0);
     G.parts.forEach(q => { q.t -= dt; if (q.sx === undefined) { q.x += q.vx * dt; q.y += q.vy * dt; } }); G.parts = G.parts.filter(q => q.t > 0);
   }
-  if (G) { sabBanner(); passHud(); }
+  if (G) { sabBanner(); passHud(); if ((G.invTick = (G.invTick || 0) + 1) % 15 === 0) invHud(); }
   render();
   requestAnimationFrame(loop);
 }
@@ -2109,8 +2302,10 @@ window.addEventListener('keydown', e => {
   if (G.codeOpen) { if (/^[0-9]$/.test(e.key)) codeKey(e.key); else if (e.key === 'Backspace') codeKey('⌫'); else if (e.key === 'Enter') codeKey('✔'); else if (e.key === 'Escape') closeCode(); return; }
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
   if (G.paused) return;
-  const act = (h, what) => { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } };
+  const act = (h, what) => { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); const rt = nearReportTeacher(h); if (rt) return bullyToDetention(rt); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } };
   if (G.twoP) {
+    if ('123'.includes(k) && k.length === 1) useItem(G.humans[0], +k - 1);
+    if ('890'.includes(k) && k.length === 1) useItem(G.humans[1], { '8': 0, '9': 1, '0': 2 }[k]);
     if (k === 'f' || k === 'e') act(G.humans[0], 'solve');
     if (k === 'g') act(G.humans[0], 'report');
     if (k === 'Enter') act(G.humans[1], 'solve');
@@ -2120,7 +2315,8 @@ window.addEventListener('keydown', e => {
     if (k === 'v') setView(VIEW === '3d' ? 'map' : '3d');
     return;
   }
-  if (k === 'e' || k === ' ') { const sp = nearSpot(G.player); if (sp) useSpot(G.player, sp); else if (nearPrincipal(G.player)) getPass(G.player); else { const n = nearNotebook(); if (n) openNotebook(n); } }
+  if (k === 'e' || k === ' ') { const sp = nearSpot(G.player), rt = nearReportTeacher(G.player); if (sp) useSpot(G.player, sp); else if (rt) bullyToDetention(rt); else if (nearPrincipal(G.player)) getPass(G.player); else { const n = nearNotebook(); if (n) openNotebook(n); } }
+  if ('123'.includes(k) && k.length === 1) useItem(G.player, +k - 1);
   if (k === 'm') setMusic(MUSIC.idx + 1);
   if (k === 'v') setView(VIEW === '3d' ? 'map' : '3d');
   if (k === 'r') { const s = nearStatue(); if (s) startMeeting(G.player, s); else pressEmergency(); }
@@ -2142,6 +2338,7 @@ window.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', e => { if (look && e.pointerId === look.id) look = null; });
 window.addEventListener('pointerup', e => { if (joy && e.pointerId === joy.id) joy.active = false; });
 window.addEventListener('pointercancel', () => { if (joy) joy.active = false; });
+$('tellBtn').onclick = () => { const rt = nearReportTeacher(G.player); if (rt && !G.paused) bullyToDetention(rt); };
 $('passBtn').onclick = () => { if (!G.paused) getPass(G.player); };
 $('fixBtn').onclick = () => { const sp = nearSpot(G.player); if (sp && !G.paused) useSpot(G.player, sp); };
 $('codeClose').onclick = closeCode;

@@ -98,5 +98,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🔧 Sabotages upstairs: Intercom server in the Robotics Lab, an air panel in the Nurse's Office
 - 📓 22 notebooks downstairs, 8 upstairs
 
+## Added in v0.9
+- 😠 Big Brock the bully patrols the downstairs hallways: takes an item or shoves you back. Teachers who see it, or a kid who tells a teacher, send him to detention (40 s)
+- 🎒 3-slot inventory (keys 1 2 3 · Player 2: 8 9 0 · or click), items scattered on both floors and respawning
+- Original Globex Kids items: ⚡ Power Pretzel, 🚪 Door Wedge, 🔑 Janitor's Keys, 🥤 Fizz Pop, 🪙 Lunch Money (+ vending machines), 📼 Hush Tape, ⏰ Wind-Up Alarm, 🧽 Chalk Cloud, ✂️ Safety Scissors, 👢 Stompy Boots, 🍎 Shiny Apple
+
 ## Still to decide
 - Quick-chat phrases
