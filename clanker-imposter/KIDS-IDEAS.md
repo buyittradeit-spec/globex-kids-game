@@ -10,7 +10,7 @@ Kids explore their school doing math notebooks. One kid is secretly a robot (the
 - **Kids** walk around the school finding and solving math notebooks.
 - **The Clanker Imposter** is a robot disguised as a kid.
   - Has a **shapeshift button**: can turn into ANY kid to trick everyone.
-  - Even disguised, there is always a small robot-y giveaway if you look closely.
+  - **No visual clues!** The disguise is perfect. Kids catch the robot by how it acts: who was near the frozen kid, who never does notebooks, clanky footsteps.
 
 ## Math notebooks (easy, about 3rd grade)
 - Addition (7 + 5)
@@ -40,8 +40,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - School-and-notebooks style games
 - Imposter / vote-someone-out style games
 
+## How to win
+- **Kids win** if they finish ALL the math notebooks OR vote out the Clanker.
+- **The Clanker wins** when it has frozen everyone until only 1 kid is left.
+
 ## Still to decide
-- What the robots look like / their disguise giveaway (antenna? blinking light?)
 - School map rooms
 - Quick-chat phrases
-- How kids win (finish all notebooks? catch the robot?)
