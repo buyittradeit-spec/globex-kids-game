@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Clanker Imposter — Globex Kids</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #111; font-family: "Trebuchet MS", system-ui, sans-serif; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+  canvas { display: block; }
+  #hud { position: fixed; top: 8px; left: 8px; right: 8px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+  .pill { background: rgba(0,0,0,.65); border: 2px solid #ffcc33; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 15px; }
+  #huntWarn { display: none; background: #c0392b; border-color: #fff; animation: flash .45s infinite alternate; }
+  @keyframes flash { from { opacity: 1; } to { opacity: .45; } }
+  #bar { width: 120px; height: 10px; background: #333; border-radius: 6px; display: inline-block; vertical-align: middle; margin-left: 6px; overflow: hidden; }
+  #barFill { height: 100%; width: 0; background: #2ecc71; }
+  #actions { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .act { display: none; font: 800 20px "Trebuchet MS", sans-serif; padding: 16px 22px; border-radius: 16px; border: 3px solid #fff; color: #fff; cursor: pointer; box-shadow: 0 4px 0 rgba(0,0,0,.4); }
+  #useBtn { background: #2980b9; }
+  #reportBtn { background: #e74c3c; }
+  #toasts { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; width: 92%; }
+  .toast { background: rgba(0,0,0,.8); border-radius: 12px; padding: 8px 14px; font-size: 15px; font-weight: 700; text-align: center; animation: fadeout 4s forwards; }
+  @keyframes fadeout { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+  .overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,15,35,.88); z-index: 10; padding: 12px; }
+  .panel { background: #1f2d55; border: 4px solid #ffcc33; border-radius: 20px; padding: 20px; max-width: 640px; width: 100%; max-height: 96vh; overflow-y: auto; text-align: center; }
+  h1 { font-size: 44px; margin: 4px 0; color: #ffcc33; text-shadow: 3px 3px 0 #000; letter-spacing: 1px; }
+  h2 { margin: 6px 0 10px; }
+  .btn { font: 800 20px "Trebuchet MS", sans-serif; padding: 12px 26px; border-radius: 14px; border: 3px solid #fff; background: #27ae60; color: #fff; cursor: pointer; margin: 6px; box-shadow: 0 4px 0 rgba(0,0,0,.4); }
+  .btn.gray { background: #7f8c8d; }
+  .how { text-align: left; font-size: 15px; line-height: 1.5; background: rgba(0,0,0,.25); border-radius: 12px; padding: 10px 14px; }
+  .ops label { display: inline-block; margin: 6px 10px; font-size: 22px; cursor: pointer; }
+  .ops input { transform: scale(1.5); margin-right: 6px; }
+  #problem { font-size: 52px; font-weight: 800; margin: 10px 0; }
+  #answer { font-size: 40px; font-weight: 800; background: #fff; color: #222; border-radius: 12px; min-height: 58px; padding: 4px; margin: 0 auto 10px; width: 180px; }
+  .pad { display: grid; grid-template-columns: repeat(3, 70px); gap: 8px; justify-content: center; }
+  .pad button { font: 800 26px "Trebuchet MS", sans-serif; height: 58px; border-radius: 12px; border: 2px solid #fff; background: #34495e; color: #fff; cursor: pointer; }
+  .pad .ok { background: #27ae60; }
+  .pad .del { background: #c0392b; }
+  #mtgList { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin: 10px 0; }
+  .card { display: flex; align-items: center; gap: 8px; background: #2c3e70; border: 3px solid transparent; border-radius: 12px; padding: 8px; text-align: left; cursor: pointer; font-weight: 700; }
+  .card.dead { opacity: .4; cursor: default; }
+  .card.picked { border-color: #ffcc33; }
+  .dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; flex-shrink: 0; }
+  .votes { margin-left: auto; font-size: 14px; }
+  #chat { text-align: left; background: rgba(0,0,0,.3); border-radius: 12px; padding: 8px 12px; min-height: 60px; font-size: 15px; }
+  #chat div { margin: 4px 0; }
+  .credit { font-size: 12px; opacity: .7; margin-top: 10px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="pill">📓 <span id="nbText">0/15</span><span id="bar"><span id="barFill"></span></span></div>
+  <div class="pill">🧒 Kids left: <span id="kidsLeft">5</span></div>
+  <div class="pill">📍 <span id="roomName">Lunchroom</span></div>
+  <div class="pill" id="huntWarn">🔊 CLANK... CLANK... RUN!</div>
+</div>
+<div id="toasts"></div>
+<div id="actions">
+  <button class="act" id="reportBtn">🚨 REPORT</button>
+  <button class="act" id="useBtn">📓 SOLVE</button>
+</div>
+
+<!-- START SCREEN -->
+<div class="overlay" id="startScreen" style="display:flex">
+  <div class="panel">
+    <h1>🤖 CLANKER IMPOSTER</h1>
+    <div style="opacity:.85;margin-bottom:10px">A Globex Kids game, designed by kids! 🏭</div>
+    <div class="how">
+      🏫 Your school is hidden inside a giant <b>Clanker warehouse</b>. One of the kids is secretly a <b>robot in disguise</b>, and it can <b>shapeshift</b> into anyone!<br>
+      📓 Find the <b>math notebooks</b> and solve them. Get one wrong and the Clanker hears you... <b>CLANK... CLANK...</b> RUN!<br>
+      🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote!<br>
+      🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
+      🎮 Move: <b>WASD / arrow keys</b> or drag on the screen. Solve: <b>E</b>. Report: <b>R</b>.
+    </div>
+    <div class="ops" style="margin-top:10px">
+      <div style="font-weight:700">Math in the notebooks:</div>
+      <label><input type="checkbox" id="opAdd" checked>➕</label>
+      <label><input type="checkbox" id="opSub" checked>➖</label>
+      <label><input type="checkbox" id="opMul" checked>✖️</label>
+      <label><input type="checkbox" id="opDiv" checked>➗</label>
+    </div>
+    <button class="btn" id="playBtn">▶ PLAY</button>
+    <div class="credit">Demo v0.1 · Globex Kids</div>
+  </div>
+</div>
+
+<!-- NOTEBOOK -->
+<div class="overlay" id="nbScreen">
+  <div class="panel" style="max-width:360px">
+    <h2>📓 Math Notebook</h2>
+    <div id="problem">7 + 5 = ?</div>
+    <div id="answer"></div>
+    <div class="pad" id="pad"></div>
+    <div id="nbMsg" style="margin-top:10px;font-weight:700;min-height:24px"></div>
+    <button class="btn gray" id="nbClose" style="font-size:16px;padding:8px 18px">Close</button>
+  </div>
+</div>
+
+<!-- MEETING -->
+<div class="overlay" id="mtgScreen">
+  <div class="panel">
+    <h2 id="mtgTitle">🔔 EMERGENCY MEETING!</h2>
+    <div id="mtgSub" style="opacity:.85"></div>
+    <div id="chat"></div>
+    <div id="mtgList"></div>
+    <div id="mtgInfo" style="font-weight:700;min-height:24px"></div>
+    <button class="btn gray" id="skipBtn">⏭ Skip vote</button>
+  </div>
+</div>
+
+<!-- END -->
+<div class="overlay" id="endScreen">
+  <div class="panel">
+    <h1 id="endTitle">🏆 KIDS WIN!</h1>
+    <div id="endSub" style="font-size:20px;margin:10px 0"></div>
+    <button class="btn" id="againBtn">🔁 Play again</button>
+  </div>
+</div>
+
+<script>
+(() => {
+// ================= SETUP =================
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+let cw = 0, ch = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cw = window.innerWidth; ch = window.innerHeight;
+  cv.width = cw * dpr; cv.height = ch * dpr;
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+}
+window.addEventListener('resize', resize); resize();
+const $ = id => document.getElementById(id);
+const rand = (a, b) => a + Math.random() * (b - a);
+const randi = (a, b) => Math.floor(rand(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+const shuffle = arr => { for (let i = arr.length - 1; i > 0; i--) { const j = randi(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; };
+
+// ================= SOUND =================
+let ac = null;
+function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+function tone(freq, dur, type = 'square', vol = 0.15, slide = 0) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur);
+}
+function noise(dur, vol, freq) {
+  const a = audio(); if (!a) return;
+  const len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = 6;
+  g.gain.value = vol; s.buffer = buf; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+}
+const SFX = {
+  clank: v => { noise(0.18, 0.9 * v, 2400); tone(180, 0.15, 'square', 0.12 * v, -60); tone(1250, 0.1, 'triangle', 0.08 * v); },
+  zap: () => { tone(1400, 0.35, 'sawtooth', 0.08, -1200); noise(0.3, 0.3, 5000); },
+  bell: () => { [0, 0.25, 0.5].forEach(d => setTimeout(() => { tone(880, 0.25, 'triangle', 0.2); tone(1320, 0.25, 'sine', 0.1); }, d * 1000)); },
+  ding: () => { tone(660, 0.12, 'triangle', 0.2); setTimeout(() => tone(990, 0.2, 'triangle', 0.2), 110); },
+  buzz: () => tone(130, 0.4, 'sawtooth', 0.15, -40),
+  pop: () => { tone(300, 0.3, 'square', 0.2, 900); noise(0.25, 0.6, 1500); },
+  poof: () => noise(0.4, 0.4, 800),
+  boing: () => tone(220, 0.25, 'sine', 0.2, 300),
+};
+
+// ================= MAP =================
+const AREAS = {
+  classroom: { name: 'Classroom', x1: 150, y1: 120, x2: 550, y2: 420, door: 350, side: 'b' },
+  lunch:     { name: 'Lunchroom', x1: 550, y1: 120, x2: 950, y2: 420, door: 750, side: 'b' },
+  gym:       { name: 'Gym',       x1: 950, y1: 120, x2: 1250, y2: 420, door: 1100, side: 'b' },
+  library:   { name: 'Library',   x1: 150, y1: 500, x2: 650, y2: 780, door: 400, side: 't' },
+  bath:      { name: 'Bathroom',  x1: 1000, y1: 500, x2: 1250, y2: 780, door: 1125, side: 't' },
+  warehouse: { name: 'Warehouse Floor', x1: 650, y1: 500, x2: 1000, y2: 780, door: 825, side: 'o' },
+  hall:      { name: 'Hallway',   x1: 150, y1: 420, x2: 1250, y2: 500 },
+};
+for (const k in AREAS) {
+  const A = AREAS[k]; A.key = k;
+  if (A.side === 'b') { A.inn = { x: A.door, y: A.y2 - 55 }; A.out = { x: A.door, y: 460 }; }
+  if (A.side === 't' || A.side === 'o') { A.inn = { x: A.door, y: A.y1 + 55 }; A.out = { x: A.door, y: 460 }; }
+}
+const ROOM_KEYS = ['classroom', 'lunch', 'gym', 'library', 'bath', 'warehouse'];
+function areaAt(x, y) {
+  for (const k of ROOM_KEYS) { const A = AREAS[k]; if (x >= A.x1 && x <= A.x2 && y >= A.y1 && y <= A.y2) return A; }
+  return AREAS.hall;
+}
+const WALLS = [], T = 14;
+function wallH(x1, x2, y, gaps = []) {
+  let x = x1; const gs = gaps.map(g => [g[0] - g[1], g[0] + g[1]]).sort((a, b) => a[0] - b[0]);
+  for (const [a, b] of gs) { if (a > x) WALLS.push({ x, y: y - T / 2, w: a - x, h: T }); x = b; }
+  if (x2 > x) WALLS.push({ x, y: y - T / 2, w: x2 - x, h: T });
+}
+function wallV(x, y1, y2) { WALLS.push({ x: x - T / 2, y: y1, w: T, h: y2 - y1 }); }
+wallH(150, 1250, 120); wallH(150, 1250, 780); wallV(150, 120, 780); wallV(1250, 120, 780);
+wallH(150, 1250, 420, [[350, 42], [750, 55], [1100, 42]]);
+wallH(150, 650, 500, [[400, 42]]); wallH(1000, 1250, 500, [[1125, 42]]);
+wallV(550, 120, 420); wallV(950, 120, 420); wallV(650, 500, 780); wallV(1000, 500, 780);
+const CRATES = [{ x: 672, y: 712, w: 56, h: 56 }, { x: 930, y: 712, w: 56, h: 56 }, { x: 672, y: 660, w: 40, h: 40 }];
+CRATES.forEach(c => WALLS.push(c));
+
+function hitsWall(x, y, r) {
+  for (const w of WALLS) {
+    const cx = Math.max(w.x, Math.min(x, w.x + w.w)), cy = Math.max(w.y, Math.min(y, w.y + w.h));
+    if ((x - cx) ** 2 + (y - cy) ** 2 < r * r) return true;
+  }
+  return false;
+}
+function moveEnt(e, dx, dy) {
+  if (!hitsWall(e.x + dx, e.y, e.r)) e.x += dx;
+  if (!hitsWall(e.x, e.y + dy, e.r)) e.y += dy;
+}
+function randPointIn(A) {
+  for (let i = 0; i < 30; i++) {
+    const p = { x: rand(A.x1 + 40, A.x2 - 40), y: rand(A.y1 + 40, A.y2 - 40) };
+    if (!hitsWall(p.x, p.y, 18)) return p;
+  }
+  return { ...A.inn };
+}
+function planPath(from, to) {
+  const a = areaAt(from.x, from.y), b = areaAt(to.x, to.y);
+  if (a === b) return [{ ...to }];
+  const pts = [];
+  if (a.key !== 'hall') pts.push({ ...a.inn }, { ...a.out });
+  if (b.key !== 'hall') pts.push({ ...b.out }, { ...b.inn });
+  pts.push({ ...to });
+  return pts;
+}
+
+// ================= GAME STATE =================
+const KID_DEFS = [
+  { name: 'Blue', color: '#3498db' }, { name: 'Red', color: '#e74c3c' }, { name: 'Green', color: '#2ecc71' },
+  { name: 'Yellow', color: '#f1c40f' }, { name: 'Purple', color: '#9b59b6' }, { name: 'Orange', color: '#e67e22' },
+];
+let G = null;
+const keys = {};
+let joy = null;
+
+function newGame() {
+  const ops = [];
+  if ($('opAdd').checked) ops.push('+'); if ($('opSub').checked) ops.push('-');
+  if ($('opMul').checked) ops.push('x'); if ($('opDiv').checked) ops.push('/');
+  if (!ops.length) ops.push('+');
+  const kids = KID_DEFS.map((d, i) => ({
+    id: i, name: d.name, color: d.color, x: 0, y: 0, r: 14, isPlayer: i === 0, isClanker: false,
+    state: 'alive', path: [], wait: 0, task: null, solveT: 0, disguise: null, disguiseT: 0,
+    saw: null, didNotebook: null, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, bob: rand(0, 6),
+  }));
+  const clanker = kids[randi(1, 5)]; clanker.isClanker = true;
+  Object.assign(clanker, { cool: 25, hunting: false, huntT: 0, target: null, chaseT: 0, shiftCd: rand(12, 25), replanT: 0, clankT: 0 });
+  const notebooks = [];
+  ['classroom', 'lunch', 'gym', 'library', 'bath', 'warehouse'].forEach(k => {
+    const n = k === 'warehouse' ? 2 : (k === 'bath' ? 2 : 3);
+    for (let i = 0; i < n; i++) {
+      let p; let tries = 0;
+      do { p = randPointIn(AREAS[k]); tries++; } while (tries < 20 && notebooks.some(o => dist(o, p) < 70));
+      notebooks.push({ x: p.x, y: p.y, done: false, area: k });
+    }
+  });
+  G = { kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
+  teleportToLunch();
+  updateHud();
+}
+function teleportToLunch() {
+  const spots = [];
+  for (let i = 0; i < 6; i++) spots.push({ x: 640 + (i % 3) * 110, y: 230 + Math.floor(i / 3) * 110 });
+  shuffle(spots);
+  G.kids.forEach((k, i) => { k.x = spots[i].x; k.y = spots[i].y; k.path = []; k.wait = rand(0.5, 2.5); k.task = null; k.solveT = 0; });
+}
+const living = () => G.kids.filter(k => k.state === 'alive');
+const innocentsLeft = () => G.kids.filter(k => k.state === 'alive' && !k.isClanker).length;
+const shownName = k => k.disguise ? k.disguise.name : k.name;
+const shownColor = k => k.disguise ? k.disguise.color : k.color;
+const kidByName = n => G.kids.find(k => k.name === n);
+
+// ================= UI HELPERS =================
+function toast(msg) {
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg;
+  $('toasts').appendChild(d); setTimeout(() => d.remove(), 4000);
+  while ($('toasts').children.length > 4) $('toasts').firstChild.remove();
+}
+function updateHud() {
+  const done = G.notebooks.filter(n => n.done).length;
+  $('nbText').textContent = `${done}/${G.notebooks.length}`;
+  $('barFill').style.width = (100 * done / G.notebooks.length) + '%';
+  $('kidsLeft').textContent = innocentsLeft() + (G.clanker.state === 'alive' ? 1 : 0);
+  $('roomName').textContent = areaAt(G.player.x, G.player.y).name + (G.player.state !== 'alive' ? ' 👻' : '');
+}
+
+// ================= VISIBILITY =================
+function canSee(e) {
+  const p = G.player;
+  if (p.state !== 'alive') return true;
+  if (e === p) return true;
+  const d = dist(p, e);
+  return d < 300 && (areaAt(p.x, p.y) === areaAt(e.x, e.y) || d < 140);
+}
+
+// ================= BOT AI =================
+function botThink(k, dt) {
+  if (k.wait > 0) { k.wait -= dt; return; }
+  if (k.solveT > 0) {
+    k.solveT -= dt;
+    if (k.solveT <= 0 && k.task && !k.task.done && !k.isClanker) {
+      k.task.done = true; k.didNotebook = AREAS[k.task.area].name;
+      if (k.state === 'alive') { G.trusted.add(k.name); toast(`⭐ ${k.name} finished a notebook in the ${AREAS[k.task.area].name}!`); }
+      else toast(`👻 ${k.name}'s ghost finished a notebook!`);
+      updateHud(); checkWin();
+    }
+    if (k.solveT <= 0) { k.task = null; k.wait = rand(0.5, 2); }
+    return;
+  }
+  if (!k.path.length) {
+    const open = G.notebooks.filter(n => !n.done);
+    const nbChance = k.isClanker ? 0.45 : (k.state === 'alive' ? 0.18 : 0.12);
+    if (open.length && Math.random() < nbChance) {
+      k.task = pick(open); k.path = planPath(k, k.task);
+    } else {
+      k.task = null; k.path = planPath(k, randPointIn(AREAS[pick(ROOM_KEYS)]));
+    }
+  }
+  followPath(k, dt, k.state === 'alive' ? 105 : 80, () => {
+    if (k.task) k.solveT = k.isClanker ? rand(3, 5) : 4; // clanker fakes it and never finishes
+    else k.wait = rand(1, 4);
+  });
+}
+function followPath(k, dt, speed, onArrive) {
+  if (!k.path.length) return;
+  const tgt = k.path[0], dx = tgt.x - k.x, dy = tgt.y - k.y, d = Math.hypot(dx, dy);
+  if (d < 8) { k.path.shift(); if (!k.path.length && onArrive) onArrive(); return; }
+  const step = Math.min(d, speed * dt);
+  if (k.state === 'ghost') { k.x += dx / d * step; k.y += dy / d * step; }
+  else moveEnt(k, dx / d * step, dy / d * step);
+  if (Math.abs(dx) > 1) k.face = dx > 0 ? 1 : -1;
+  k.stuckT += dt;
+  if (k.stuckT > 1.5) {
+    if (dist(k, k.lastPos) < 6) { k.path = [randPointIn(areaAt(k.x, k.y))]; k.task = null; }
+    k.stuckT = 0; k.lastPos = { x: k.x, y: k.y };
+  }
+}
+function isolated(victim) {
+  const c = G.clanker;
+  const sees = (j, e) => { const d = dist(j, e); return d < 210 && (areaAt(j.x, j.y) === areaAt(e.x, e.y) || d < 110); };
+  return living().every(j => j === c || j === victim || (!sees(j, c) && !sees(j, victim)));
+}
+function clankerThink(c, dt) {
+  c.cool -= dt; c.shiftCd -= dt;
+  // shapeshift
+  if (c.disguise) { c.disguiseT -= dt; if (c.disguiseT <= 0) { puff(c); c.disguise = null; } }
+  else if (c.shiftCd <= 0) {
+    const others = living().filter(k => k !== c);
+    if (others.length) { puff(c); const o = pick(others); c.disguise = { name: o.name, color: o.color }; c.disguiseT = rand(12, 18); }
+    c.shiftCd = rand(25, 40);
+  }
+  const p = G.player;
+  // hunting the player after a wrong answer
+  if (c.hunting) {
+    c.huntT -= dt; c.replanT -= dt; c.clankT -= dt;
+    if (c.clankT <= 0) { const v = Math.max(0.05, 1 - dist(c, p) / 650); SFX.clank(v); c.clankT = 0.45; }
+    if (c.replanT <= 0) { c.path = planPath(c, p); c.replanT = 0.6; }
+    followPath(c, dt, 128);
+    if (p.state === 'alive' && dist(c, p) < 30) { freeze(p); c.hunting = false; c.cool = 22; }
+    if (c.huntT <= 0 || p.state !== 'alive') { c.hunting = false; c.path = []; $('huntWarn').style.display = 'none'; }
+    return;
+  }
+  // normal freeze attempts
+  if (c.cool <= 0) {
+    if (!c.target || c.target.state !== 'alive') {
+      const cands = living().filter(k => k !== c && isolated(k) && dist(k, c) < 900).sort((a, b) => dist(a, c) - dist(b, c));
+      if (cands.length) { c.target = cands[0]; c.chaseT = 0; c.task = null; c.solveT = 0; c.wait = 0; }
+    }
+    if (c.target) {
+      c.chaseT += dt; c.replanT -= dt;
+      if (c.replanT <= 0) { c.path = planPath(c, c.target); c.replanT = 0.5; }
+      followPath(c, dt, 118);
+      if (dist(c, c.target) < 32) {
+        if (isolated(c.target)) { freeze(c.target); c.cool = rand(18, 26); } else c.cool = 3;
+        c.target = null; c.path = [];
+      } else if (c.chaseT > 9) { c.target = null; c.path = []; c.cool = 4; }
+      return;
+    }
+  }
+  botThink(c, dt);
+}
+function freeze(v) {
+  const c = G.clanker;
+  SFX.zap();
+  G.fx.push({ type: 'zap', x1: c.x, y1: c.y, x2: v.x, y2: v.y, t: 0.45 });
+  G.statues.push({ x: v.x, y: v.y, color: v.color, name: v.name, reported: false, kid: v, area: areaAt(v.x, v.y).name });
+  const room = areaAt(v.x, v.y).name;
+  const shown = shownName(c);
+  living().forEach(k => { if (k !== c && k !== v && !k.isPlayer && dist(k, v) < 320) k.saw = { name: shown, victim: v.name, room }; });
+  if (v.isPlayer) {
+    toast(`🧊 ${shown} zapped YOU! You're a ghost now. Keep solving notebooks!`);
+    $('huntWarn').style.display = 'none';
+  } else if (canSee(c) || canSee(v)) {
+    toast(`⚡ You saw ${shown} zap ${v.name}!`);
+  }
+  v.state = 'ghost'; v.path = []; v.task = null; v.solveT = 0; v.wait = 1;
+  for (let i = 0; i < 16; i++) G.parts.push({ x: v.x, y: v.y, vx: rand(-90, 90), vy: rand(-120, 40), t: rand(0.5, 1), c: '#bdf' });
+  updateHud(); checkWin();
+}
+function puff(k) {
+  if (canSee(k)) SFX.poof();
+  for (let i = 0; i < 18; i++) G.parts.push({ x: k.x, y: k.y, vx: rand(-70, 70), vy: rand(-70, 70), t: rand(0.4, 0.9), c: '#ccc', big: true });
+}
+
+// ================= PLAYER =================
+function playerMove(dt) {
+  const p = G.player;
+  let dx = 0, dy = 0;
+  if (keys.ArrowLeft || keys.a) dx--; if (keys.ArrowRight || keys.d) dx++;
+  if (keys.ArrowUp || keys.w) dy--; if (keys.ArrowDown || keys.s) dy++;
+  if (joy && joy.active) { const jx = joy.cx - joy.sx, jy = joy.cy - joy.sy, jd = Math.hypot(jx, jy); if (jd > 8) { dx = jx / Math.max(jd, 50); dy = jy / Math.max(jd, 50); } }
+  const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
+  const sp = (p.state === 'alive' ? 150 : 170) * dt;
+  if (p.state === 'ghost') { p.x = Math.max(160, Math.min(1240, p.x + dx * sp)); p.y = Math.max(130, Math.min(770, p.y + dy * sp)); }
+  else moveEnt(p, dx * sp, dy * sp);
+  if (Math.abs(dx) > 0.1) p.face = dx > 0 ? 1 : -1;
+  p.moving = m > 0.1;
+}
+function nearNotebook() { const p = G.player; return G.notebooks.find(n => !n.done && dist(n, p) < 48); }
+function nearStatue() { const p = G.player; if (p.state !== 'alive') return null; return G.statues.find(s => !s.reported && dist(s, p) < 75); }
+
+// ---- notebook modal ----
+let prob = null, ans = '';
+function makeProblem() {
+  const op = pick(G.ops); let a, b, r;
+  if (op === '+') { a = randi(2, 30); b = randi(2, 20); r = a + b; }
+  if (op === '-') { a = randi(5, 30); b = randi(1, a); r = a - b; }
+  if (op === 'x') { a = randi(2, 10); b = randi(1, 5); if (Math.random() < .5) [a, b] = [b, a]; r = a * b; }
+  if (op === '/') { b = randi(2, 5); r = randi(1, 10); a = b * r; if (Math.random() < .3) { b = randi(6, 10); r = randi(1, 5); a = b * r; } }
+  const sym = { '+': '+', '-': '−', 'x': '×', '/': '÷' }[op];
+  return { text: `${a} ${sym} ${b} = ?`, r };
+}
+function openNotebook(n) {
+  G.nbOpen = n; prob = makeProblem(); ans = '';
+  $('problem').textContent = prob.text; $('answer').textContent = ''; $('nbMsg').textContent = '';
+  $('nbScreen').style.display = 'flex';
+}
+function closeNotebook() { G.nbOpen = null; $('nbScreen').style.display = 'none'; }
+function submitAnswer() {
+  if (!G.nbOpen || ans === '') return;
+  if (+ans === prob.r) {
+    SFX.ding(); G.nbOpen.done = true; $('nbMsg').textContent = '⭐ Correct! Notebook done!';
+    G.player.didNotebook = areaAt(G.player.x, G.player.y).name;
+    updateHud(); setTimeout(() => { closeNotebook(); checkWin(); }, 700);
+  } else {
+    SFX.buzz();
+    const c = G.clanker;
+    $('nbMsg').textContent = `Oops! The answer was ${prob.r}.` + (G.player.state === 'alive' && c.state === 'alive' ? ' The Clanker heard you... RUN! 🔊' : '');
+    setTimeout(() => {
+      closeNotebook();
+      if (G.player.state === 'alive' && c.state === 'alive' && !G.over) {
+        c.hunting = true; c.huntT = 11; c.replanT = 0; c.clankT = 0; c.target = null; c.task = null; c.solveT = 0; c.wait = 0;
+        $('huntWarn').style.display = 'block';
+      }
+    }, 1200);
+  }
+}
+(function buildPad() {
+  const pad = $('pad');
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✔'].forEach(k => {
+    const b = document.createElement('button'); b.textContent = k;
+    if (k === '✔') b.className = 'ok'; if (k === '⌫') b.className = 'del';
+    b.onclick = () => padKey(k); pad.appendChild(b);
+  });
+})();
+function padKey(k) {
+  if (k === '⌫') ans = ans.slice(0, -1);
+  else if (k === '✔') return submitAnswer();
+  else if (ans.length < 4) ans += k;
+  $('answer').textContent = ans;
+}
+$('nbClose').onclick = closeNotebook;
+
+// ================= MEETING =================
+function startMeeting(reporter, statue) {
+  if (G.paused || G.over) return;
+  G.paused = true; closeNotebook();
+  G.clanker.hunting = false; $('huntWarn').style.display = 'none';
+  G.statues.forEach(s => s.reported = true);
+  SFX.bell();
+  const m = G.meeting = { votes: {}, playerVote: null, phase: 'talk', timer: null };
+  $('mtgTitle').textContent = '🔔 EMERGENCY MEETING!';
+  $('mtgSub').textContent = `${reporter.isPlayer ? 'You' : reporter.name} found ${statue.name} frozen in the ${statue.area}! 🧊`;
+  $('chat').innerHTML = ''; $('mtgInfo').textContent = 'Listen to what everyone says...';
+  $('skipBtn').style.display = 'none';
+  renderCards();
+  $('mtgScreen').style.display = 'flex';
+  // build statements
+  const lines = [], accused = [];
+  const speakers = shuffle(living().filter(k => !k.isPlayer));
+  speakers.sort((a, b) => (b.saw ? 1 : 0) - (a.saw ? 1 : 0));
+  speakers.forEach(k => {
+    const here = areaAt(k.x, k.y).name;
+    if (k.isClanker) {
+      const others = living().filter(o => o !== k);
+      if (Math.random() < 0.45 && others.length) { const o = pick(others); accused.push(o.name); lines.push([k, `I think ${o.name} is acting weird! 🤨`]); }
+      else lines.push([k, `I was in the ${pick(ROOM_KEYS.map(r => AREAS[r].name))} doing a notebook.`]);
+    } else if (k.saw) {
+      if (k.saw.name === k.name) lines.push([k, `I saw ME zap ${k.saw.victim}?! But it wasn't me... the Clanker copied me! 😱`]);
+      else { accused.push(k.saw.name); lines.push([k, `I SAW ${k.saw.name} zap ${k.saw.victim} in the ${k.saw.room}! ⚡`]); }
+    } else if (k.didNotebook) lines.push([k, `I finished a notebook in the ${k.didNotebook}. 📓`]);
+    else lines.push([k, pick([`I was in the ${here}.`, `I don't know who it is... 😟`, `I didn't see anything!`])]);
+  });
+  // accused kids defend themselves
+  [...new Set(accused)].forEach(n => { const k = kidByName(n); if (k && k.state === 'alive' && !k.isPlayer) lines.push([k, `It wasn't me!! 😤`]); });
+  m.accused = accused;
+  let i = 0;
+  const step = () => {
+    if (G.meeting !== m) return;
+    if (i < lines.length) { const [k, txt] = lines[i++]; addChat(k.color, k.name, txt); m.timer = setTimeout(step, 1100); }
+    else startVoting();
+  };
+  m.timer = setTimeout(step, 900);
+}
+function addChat(color, name, txt) {
+  const d = document.createElement('div');
+  d.innerHTML = `<b style="color:${color}">${name}:</b> `; d.appendChild(document.createTextNode(txt));
+  $('chat').appendChild(d); $('chat').scrollTop = 1e6;
+}
+function renderCards(showVotes) {
+  const list = $('mtgList'); list.innerHTML = '';
+  G.kids.forEach(k => {
+    const d = document.createElement('div');
+    const alive = k.state === 'alive';
+    d.className = 'card' + (alive ? '' : ' dead') + (G.meeting && G.meeting.playerVote === k.name ? ' picked' : '');
+    const v = showVotes ? (G.meeting.tally[k.name] || 0) : 0;
+    d.innerHTML = `<span class="dot" style="background:${k.color}"></span><span>${k.isPlayer ? k.name + ' (You)' : k.name}${alive ? '' : ' 🧊'}</span><span class="votes">${showVotes && v ? '🗳️'.repeat(v) : ''}</span>`;
+    if (alive && !k.isPlayer) d.onclick = () => playerVote(k.name);
+    list.appendChild(d);
+  });
+}
+function startVoting() {
+  const m = G.meeting; m.phase = 'vote';
+  if (G.player.state !== 'alive') { $('mtgInfo').textContent = '👻 Ghosts can\'t vote. Watching...'; m.timer = setTimeout(finishVoting, 1800); return; }
+  $('mtgInfo').textContent = '🗳️ Tap who you think is the Clanker! (20 seconds)';
+  $('skipBtn').style.display = 'inline-block';
+  let left = 20;
+  m.timer = setInterval(() => { left--; if (left > 0 && m.phase === 'vote') $('mtgInfo').textContent = `🗳️ Tap who you think is the Clanker! (${left})`; if (left <= 0) { clearInterval(m.timer); playerVote('skip'); } }, 1000);
+}
+function playerVote(name) {
+  const m = G.meeting; if (!m || m.phase !== 'vote') return;
+  clearInterval(m.timer); m.playerVote = name; m.phase = 'counting';
+  $('skipBtn').style.display = 'none';
+  $('mtgInfo').textContent = name === 'skip' ? 'You skipped. Counting votes...' : `You voted for ${name}. Counting votes...`;
+  renderCards(); setTimeout(finishVoting, 1200);
+}
+function finishVoting() {
+  const m = G.meeting; m.phase = 'result';
+  const votes = [];
+  if (G.player.state === 'alive') votes.push(m.playerVote || 'skip');
+  living().filter(k => !k.isPlayer).forEach(k => {
+    const others = living().filter(o => o !== k);
+    let v = 'skip';
+    const acc = m.accused.filter(n => n !== k.name && kidByName(n).state === 'alive');
+    if (k.isClanker) { const inn = acc.filter(n => n !== k.name); v = inn.length ? pick(inn) : (Math.random() < .5 ? pick(others).name : 'skip'); }
+    else if (k.saw && k.saw.name !== k.name && kidByName(k.saw.name).state === 'alive') v = k.saw.name;
+    else if (acc.length && Math.random() < 0.6) v = pick(acc);
+    else if (m.playerVote && m.playerVote !== 'skip' && m.playerVote !== k.name && Math.random() < 0.35) v = m.playerVote;
+    else if (Math.random() < 0.5) {
+      const sus = others.filter(o => !G.trusted.has(o.name));
+      v = (sus.length ? pick(sus) : pick(others)).name;
+    }
+    votes.push(v);
+  });
+  const tally = {}; votes.forEach(v => tally[v] = (tally[v] || 0) + 1);
+  m.tally = tally; renderCards(true);
+  let best = null, bestN = 0, tie = false;
+  for (const n in tally) { if (n === 'skip') continue; if (tally[n] > bestN) { best = n; bestN = tally[n]; tie = false; } else if (tally[n] === bestN) tie = true; }
+  const skips = tally.skip || 0;
+  setTimeout(() => {
+    if (!best || tie || skips >= bestN) {
+      $('mtgInfo').textContent = tie ? '🤝 It\'s a tie! Nobody gets voted out.' : '⏭ Most kids skipped. Nobody gets voted out.';
+      setTimeout(endMeeting, 2200);
+    } else {
+      const k = kidByName(best);
+      $('mtgScreen').style.display = 'none';
+      G.eject = { kid: k, t: 0, isClanker: k.isClanker, head: null };
+      k.state = k.isClanker ? 'out' : 'ghost';
+    }
+  }, 1600);
+}
+function endMeeting() {
+  const m = G.meeting; if (m) { clearTimeout(m.timer); clearInterval(m.timer); }
+  G.meeting = null; $('mtgScreen').style.display = 'none';
+  G.statues = []; G.kids.forEach(k => { k.saw = null; k.didNotebook = null; });
+  const c = G.clanker; c.cool = 20; c.hunting = false; c.target = null; c.path = [];
+  if (c.disguise) c.disguise = null;
+  teleportToLunch(); G.paused = false; updateHud(); checkWin();
+}
+$('skipBtn').onclick = () => playerVote('skip');
+
+// ================= WIN =================
+function checkWin() {
+  if (G.over) return;
+  const c = G.clanker;
+  if (c.state === 'out') return endGame(true, `You voted out ${c.name}, the Clanker! 🤖💥`);
+  if (G.notebooks.every(n => n.done)) return endGame(true, `All the math notebooks are solved! 📓⭐<br>The Clanker was <b style="color:${c.color}">${c.name}</b>.`);
+  if (innocentsLeft() <= 1 && !G.paused) return endGame(false, `Only 1 kid is left!<br>The Clanker was <b style="color:${c.color}">${c.name}</b>. 🤖`);
+}
+function endGame(kidsWin, msg) {
+  G.over = true; G.paused = true; $('huntWarn').style.display = 'none';
+  $('endTitle').textContent = kidsWin ? '🏆 KIDS WIN!' : '🤖 THE CLANKER WINS!';
+  $('endSub').innerHTML = msg;
+  setTimeout(() => $('endScreen').style.display = 'flex', 400);
+  kidsWin ? SFX.ding() : SFX.clank(1);
+}
+
+// ================= DRAWING =================
+function drawKid(x, y, color, alpha, label, face, bob, moving, robot) {
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
+  const b = moving ? Math.sin(bob * 12) * 2 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 14, 13, 5, 0, 0, 6.3); ctx.fill();
+  if (robot) {
+    ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2;
+    ctx.fillRect(-12, -6 + b, 24, 20); ctx.strokeRect(-12, -6 + b, 24, 20);
+  } else {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-12, -4 + b, 24, 18, 7); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2; ctx.stroke();
+    // head
+    ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -13 + b, 10, 0, 6.3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, -16 + b, 10, Math.PI, 0); ctx.fill(); // hair/cap
+    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(face * 3 - 3, -12 + b, 1.8, 0, 6.3); ctx.arc(face * 3 + 3, -12 + b, 1.8, 0, 6.3); ctx.fill();
+  }
+  if (label) { ctx.globalAlpha = alpha; ctx.font = 'bold 11px Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(label, 1, 31); ctx.fillStyle = '#fff'; ctx.fillText(label, 0, 30); }
+  ctx.restore();
+}
+function drawRobotHead(x, y, rot) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.fillStyle = '#bdc3c7'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2;
+  ctx.fillRect(-11, -10, 22, 18); ctx.strokeRect(-11, -10, 22, 18);
+  ctx.fillStyle = '#e74c3c'; ctx.fillRect(-7, -5, 5, 4); ctx.fillRect(2, -5, 5, 4);
+  ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, -20); ctx.stroke();
+  ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(0, -21, 3, 0, 6.3); ctx.fill();
+  ctx.restore();
+}
+function drawStatue(s) {
+  ctx.save();
+  drawKid(s.x, s.y, s.color, 0.9, s.name, 1, 0, false);
+  ctx.fillStyle = 'rgba(160,220,255,.55)'; ctx.strokeStyle = '#e0f6ff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(s.x - 18, s.y - 28, 36, 46, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff'; const tw = (G.t * 3) % 6;
+  ctx.fillRect(s.x - 10 + tw, s.y - 22, 2, 6); ctx.fillRect(s.x + 8, s.y - 4 - tw, 2, 5);
+  ctx.restore();
+}
+function drawWorld() {
+  // warehouse surroundings
+  ctx.fillStyle = '#2b2b30'; ctx.fillRect(-400, -400, 2200, 1700);
+  ctx.strokeStyle = '#3a3a42'; ctx.lineWidth = 2;
+  for (let x = -400; x < 1800; x += 60) { ctx.beginPath(); ctx.moveTo(x, -400); ctx.lineTo(x, 1300); ctx.stroke(); }
+  for (let y = -400; y < 1300; y += 60) { ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(1800, y); ctx.stroke(); }
+  // outer conveyor belts
+  [[60, -40, 1300, 50], [60, 830, 1300, 50]].forEach(([x, y, w, h]) => conveyor(x, y, w, h));
+  // big sign
+  ctx.fillStyle = '#c0392b'; ctx.fillRect(520, -10, 360, 50); ctx.fillStyle = '#fff'; ctx.font = 'bold 30px Trebuchet MS'; ctx.textAlign = 'center';
+  ctx.fillText('⚙ CLANKER CO. ⚙', 700, 26);
+  // robot arms silhouettes
+  for (const ax of [40, 1360]) { ctx.strokeStyle = '#555'; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(ax, 700); ctx.lineTo(ax, 450); ctx.lineTo(ax + (ax < 700 ? 60 : -60) + Math.sin(G.t) * 20, 330); ctx.stroke(); }
+  // floors
+  const floorCol = { classroom: '#d9c9a3', lunch: '#cfe3e8', gym: '#d4a373', library: '#b5838d', bath: '#e3eef5', warehouse: '#7f8c8d', hall: '#bfbfbf' };
+  for (const k in AREAS) { const A = AREAS[k]; ctx.fillStyle = floorCol[k]; ctx.fillRect(A.x1, A.y1, A.x2 - A.x1, A.y2 - A.y1); }
+  // checker floor in lunchroom
+  ctx.fillStyle = 'rgba(0,0,0,.06)'; for (let x = 550; x < 950; x += 40) for (let y = 120; y < 420; y += 40) if (((x + y) / 40) % 2 === 0) ctx.fillRect(x, y, 40, 40);
+  // decorations
+  ctx.fillStyle = '#8e6e53'; for (let i = 0; i < 2; i++) ctx.fillRect(610 + i * 170, 190, 120, 26), ctx.fillRect(610 + i * 170, 300, 120, 26); // lunch tables
+  ctx.fillStyle = '#2d572c'; ctx.fillRect(250, 135, 200, 22); // chalkboard
+  ctx.fillStyle = '#8e6e53'; for (let x = 200; x < 520; x += 80) for (let y = 220; y < 380; y += 70) ctx.fillRect(x, y, 44, 26); // desks
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(1100, 270, 45, 0, 6.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(1100, 130); ctx.lineTo(1100, 410); ctx.stroke(); // gym lines
+  ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(1210, 270, 9, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#6d4c41'; for (let y = 580; y < 760; y += 60) ctx.fillRect(190, y, 150, 18), ctx.fillRect(460, y, 150, 18); // shelves
+  ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'].forEach((c, i) => { ctx.fillStyle = c; for (let y = 580; y < 760; y += 60) ctx.fillRect(195 + i * 36, y + 2, 10, 14); });
+  ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 3; for (let x = 1020; x < 1240; x += 70) ctx.strokeRect(x, 690, 60, 80); // stalls
+  ctx.fillStyle = '#fff'; ctx.fillRect(1030, 520, 40, 22); ctx.fillRect(1180, 520, 40, 22); // sinks
+  conveyor(700, 620, 260, 30);
+  // walls
+  ctx.fillStyle = '#34495e'; WALLS.forEach(w => { if (!CRATES.includes(w)) ctx.fillRect(w.x, w.y, w.w, w.h); });
+  CRATES.forEach(c => { ctx.fillStyle = '#a0522d'; ctx.fillRect(c.x, c.y, c.w, c.h); ctx.strokeStyle = '#5d2e0f'; ctx.lineWidth = 3; ctx.strokeRect(c.x, c.y, c.w, c.h); ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + c.w, c.y + c.h); ctx.stroke(); });
+  // room labels
+  ctx.font = 'bold 16px Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.35)';
+  for (const k of ROOM_KEYS) { const A = AREAS[k]; ctx.fillText(A.name.toUpperCase(), (A.x1 + A.x2) / 2, A.y1 + (A.side === 'b' ? 36 : A.y2 - A.y1 - 14)); }
+  // notebooks
+  G.notebooks.forEach(n => {
+    if (n.done) { ctx.globalAlpha = .45; ctx.fillStyle = '#2ecc71'; ctx.fillRect(n.x - 10, n.y - 13, 20, 26); ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('✓', n.x, n.y + 6); ctx.globalAlpha = 1; return; }
+    const pulse = 1 + Math.sin(G.t * 4 + n.x) * .08;
+    ctx.save(); ctx.translate(n.x, n.y); ctx.scale(pulse, pulse);
+    ctx.fillStyle = 'rgba(255,230,80,.35)'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#f39c12'; ctx.fillRect(-10, -13, 20, 26); ctx.fillStyle = '#fff'; ctx.fillRect(-6, -9, 12, 3); ctx.fillRect(-6, -3, 12, 3); ctx.fillRect(-6, 3, 9, 3);
+    ctx.restore();
+  });
+}
+function conveyor(x, y, w, h) {
+  ctx.fillStyle = '#222'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3; const off = (G.t * 40) % 30;
+  for (let i = x - 30 + off; i < x + w; i += 30) { if (i > x) { ctx.beginPath(); ctx.moveTo(i, y + 3); ctx.lineTo(i - 8, y + h - 3); ctx.stroke(); } }
+  // robot parts riding along
+  ctx.fillStyle = '#95a5a6'; for (let i = 0; i < w; i += 90) { const px = x + ((i + G.t * 40) % w); ctx.fillRect(px, y + h / 2 - 7, 14, 14); }
+}
+function render() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#111'; ctx.fillRect(0, 0, cw, ch);
+  if (!G) return;
+  const p = G.player, s = Math.min(cw / 820, ch / 560);
+  const camX = cw / 2 - p.x * s, camY = ch / 2 - p.y * s;
+  ctx.setTransform(dpr * s, 0, 0, dpr * s, dpr * camX, dpr * camY);
+  drawWorld();
+  G.statues.forEach(st => { if (canSee(st)) drawStatue(st); });
+  const ents = G.kids.filter(k => k.state !== 'out' && (k.isPlayer || canSee(k))).sort((a, b) => a.y - b.y);
+  ents.forEach(k => {
+    if (k.state === 'ghost') { if (p.state === 'ghost' || k.isPlayer) drawKid(k.x, k.y - 6 + Math.sin(G.t * 3 + k.id) * 4, k.color, .4, '👻 ' + k.name, k.face, 0, false); return; }
+    drawKid(k.x, k.y, shownColor(k), 1, k.isPlayer ? 'YOU' : shownName(k), k.face, G.t + k.bob, k.isPlayer ? p.moving : k.path.length > 0);
+  });
+  G.fx.forEach(f => {
+    if (f.type === 'zap' && (canSee({ x: f.x1, y: f.y1 }) || canSee({ x: f.x2, y: f.y2 }))) {
+      ctx.strokeStyle = '#7ef'; ctx.lineWidth = 5; ctx.globalAlpha = f.t / .45; ctx.beginPath(); ctx.moveTo(f.x1, f.y1 - 10);
+      for (let i = 1; i <= 6; i++) ctx.lineTo(f.x1 + (f.x2 - f.x1) * i / 6 + rand(-8, 8), f.y1 - 10 + (f.y2 - f.y1) * i / 6 + rand(-8, 8));
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  });
+  G.parts.forEach(q => { if (!canSee(q)) return; ctx.globalAlpha = Math.max(0, q.t); ctx.fillStyle = q.c; ctx.beginPath(); ctx.arc(q.x, q.y, q.big ? 7 : 3, 0, 6.3); ctx.fill(); ctx.globalAlpha = 1; });
+  // fog of war
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (p.state === 'alive') {
+    const g = ctx.createRadialGradient(cw / 2, ch / 2, 170 * s, cw / 2, ch / 2, 310 * s);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.82)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+  } else { ctx.fillStyle = 'rgba(40,60,120,.18)'; ctx.fillRect(0, 0, cw, ch); }
+  if (G.player.state === 'alive' && G.clanker.hunting) { ctx.fillStyle = `rgba(200,0,0,${0.12 + Math.sin(G.t * 14) * 0.08})`; ctx.fillRect(0, 0, cw, ch); }
+  // joystick
+  if (joy && joy.active) {
+    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(joy.sx, joy.sy, 50, 0, 6.3); ctx.stroke();
+    const jx = joy.cx - joy.sx, jy = joy.cy - joy.sy, jd = Math.hypot(jx, jy), k = jd > 50 ? 50 / jd : 1;
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.beginPath(); ctx.arc(joy.sx + jx * k, joy.sy + jy * k, 22, 0, 6.3); ctx.fill();
+  }
+  if (G.eject) drawEject(s);
+}
+
+// ================= EJECTION ANIMATION =================
+function drawEject(s) {
+  const e = G.eject, k = e.kid, cx = cw / 2, cy = ch / 2;
+  ctx.fillStyle = 'rgba(10,15,35,.92)'; ctx.fillRect(0, 0, cw, ch);
+  ctx.save(); ctx.translate(cx, cy); const z = Math.max(1.5, s * 2.2); ctx.scale(z, z);
+  ctx.textAlign = 'center';
+  if (e.isClanker) {
+    const spin = Math.min(e.t, 2.6), ang = spin * spin * 3, R = 45;
+    const bx = e.t < 2.6 ? Math.cos(ang) * R : Math.cos(ang) * R, by = e.t < 2.6 ? Math.sin(ang) * R * .5 : Math.sin(ang) * R * .5;
+    if (e.t < 1.2) drawKid(bx, by, k.color, 1, k.name, Math.cos(ang) > 0 ? 1 : -1, e.t * 3, true);
+    else {
+      // disguise falls off, robot revealed, spinning faster
+      drawKid(bx, by, k.color, 1, '', 1, e.t * 3, true, true);
+      if (!e.head) drawRobotHead(bx, by - 16, Math.sin(e.t * 20) * .3);
+      if (e.t > 2.6 && !e.head) { e.head = { x: bx, y: by - 16, vx: 140, vy: -260, rot: 0 }; SFX.pop(); for (let i = 0; i < 30; i++) G.parts.push({ sx: bx, sy: by - 16, vx: rand(-160, 160), vy: rand(-220, 40), t: rand(.6, 1.2), c: pick(['#ff0', '#f80', '#fff']) }); }
+    }
+    if (e.head) {
+      const h = e.head; drawRobotHead(h.x, h.y, h.rot);
+      G.parts.filter(q => q.sx !== undefined).forEach(q => { ctx.globalAlpha = Math.max(0, q.t); ctx.fillStyle = q.c; ctx.fillRect(q.sx, q.sy, 3, 3); ctx.globalAlpha = 1; });
+    }
+    ctx.fillStyle = '#ffcc33'; ctx.font = 'bold 12px Trebuchet MS';
+    ctx.fillText(e.t < 1.2 ? `${k.name}...?` : (e.t < 2.6 ? 'CLANK CLANK CLANK!!' : `💥 ${k.name} WAS THE CLANKER!`), 0, -95);
+  } else {
+    drawKid(0, 0, k.color, 1, k.name, 1, 0, false);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px Trebuchet MS';
+    ctx.fillText(`😬 ${k.name} was NOT the Clanker...`, 0, -70);
+    ctx.font = '9px Trebuchet MS'; ctx.fillText(`${innocentsLeft() <= 1 ? '' : 'The real Clanker is still hiding!'}`, 0, 60);
+  }
+  ctx.restore();
+}
+function updateEject(dt) {
+  const e = G.eject; e.t += dt;
+  if (e.isClanker) {
+    if (e.t > 1.2 && e.t < 2.6) { e.ct = (e.ct || 0) - dt; if (e.ct <= 0) { SFX.clank(.8); e.ct = Math.max(.08, .35 - (e.t - 1.2) * .2); } }
+    if (e.head) {
+      const h = e.head; h.vy += 600 * dt; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += 8 * dt;
+      if (h.y > 40 && h.vy > 0) { h.vy *= -.6; h.vx *= .8; if (Math.abs(h.vy) > 60) SFX.boing(); }
+    }
+    G.parts.forEach(q => { if (q.sx !== undefined) { q.sx += q.vx * dt; q.sy += q.vy * dt; q.vy += 300 * dt; } });
+    if (e.t > 5.2) { G.eject = null; G.over = false; checkWin(); }
+  } else if (e.t > 2.8) { G.eject = null; endMeeting(); }
+}
+
+// ================= LOOP =================
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (G) {
+    G.t += dt;
+    if (G.eject) updateEject(dt);
+    else if (!G.paused && !G.nbOpen) {
+      playerMove(dt);
+      G.kids.forEach(k => {
+        if (k.isPlayer || k.state === 'out') return;
+        if (k.isClanker && k.state === 'alive') clankerThink(k, dt); else botThink(k, dt);
+      });
+      // bots report statues they find
+      for (const k of living()) {
+        if (k.isPlayer || k.isClanker) continue;
+        const st = G.statues.find(s => !s.reported && dist(s, k) < 150 && areaAt(s.x, s.y) === areaAt(k.x, k.y));
+        if (st) { startMeeting(k, st); break; }
+      }
+      $('useBtn').style.display = nearNotebook() ? 'block' : 'none';
+      $('reportBtn').style.display = nearStatue() ? 'block' : 'none';
+      if (G.player.moving || Math.random() < .05) $('roomName').textContent = areaAt(G.player.x, G.player.y).name + (G.player.state !== 'alive' ? ' 👻' : '');
+    } else { $('useBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; }
+    G.fx.forEach(f => f.t -= dt); G.fx = G.fx.filter(f => f.t > 0);
+    G.parts.forEach(q => { q.t -= dt; if (q.sx === undefined) { q.x += q.vx * dt; q.y += q.vy * dt; } }); G.parts = G.parts.filter(q => q.t > 0);
+  }
+  render();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ================= INPUT =================
+window.addEventListener('keydown', e => {
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = true;
+  if (!G) return;
+  if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
+  if (G.paused) return;
+  if (k === 'e' || k === ' ') { const n = nearNotebook(); if (n) openNotebook(n); }
+  if (k === 'r') { const s = nearStatue(); if (s) startMeeting(G.player, s); }
+  if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
+cv.addEventListener('pointerdown', e => { audio(); joy = { active: true, sx: e.clientX, sy: e.clientY, cx: e.clientX, cy: e.clientY, id: e.pointerId }; });
+window.addEventListener('pointermove', e => { if (joy && joy.active && e.pointerId === joy.id) { joy.cx = e.clientX; joy.cy = e.clientY; } });
+window.addEventListener('pointerup', e => { if (joy && e.pointerId === joy.id) joy.active = false; });
+window.addEventListener('pointercancel', () => { if (joy) joy.active = false; });
+$('useBtn').onclick = () => { const n = nearNotebook(); if (n && !G.paused) openNotebook(n); };
+$('reportBtn').onclick = () => { const s = nearStatue(); if (s && !G.paused) startMeeting(G.player, s); };
+$('playBtn').onclick = () => { audio(); SFX.ding(); $('startScreen').style.display = 'none'; newGame(); };
+$('againBtn').onclick = () => { $('endScreen').style.display = 'none'; newGame(); };
+window.__game = () => G; window.__dbg = { freeze, startMeeting, playerVote }; // for testing
+})();
+</script>
+</body>
+</html>
