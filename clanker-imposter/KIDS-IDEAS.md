@@ -6,6 +6,9 @@
 ## The idea
 Kids explore their school doing math notebooks. One kid is secretly a robot (the Clanker Imposter) in disguise. Find it before it freezes everyone!
 
+## The map
+A **school built INSIDE a giant Clanker warehouse** 🏭: classrooms and a lunchroom surrounded by robot factory stuff.
+
 ## Players
 - **Kids** walk around the school finding and solving math notebooks.
 - **The Clanker Imposter** is a robot disguised as a kid.
@@ -45,5 +48,5 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - **The Clanker wins** when it has frozen everyone until only 1 kid is left.
 
 ## Still to decide
-- School map rooms
+- Which rooms are in the warehouse school
 - Quick-chat phrases
