@@ -62,11 +62,13 @@
   <div class="pill">📍 <span id="roomName">Lunchroom</span></div>
   <div class="pill" id="viewBtn" style="pointer-events:auto;cursor:pointer">🗺️ Map view</div>
   <div class="pill" id="musicBtn" style="pointer-events:auto;cursor:pointer">🎵 Country</div>
+  <div class="pill" id="singBtn" style="pointer-events:auto;cursor:pointer">🎤 Singing: off</div>
   <div class="pill" id="passPill" style="display:none">🎫</div>
   <div class="pill" id="huntWarn">🔊 CLANK... CLANK... RUN!</div>
 </div>
 <div id="sabBanner" style="position:fixed;top:96px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;z-index:3;padding:8px 18px;border-radius:14px;border:3px solid #fff;font-size:17px;text-align:center;max-width:94%;animation:flash .6s infinite alternate"></div>
 <div id="toasts"></div>
+<div id="lyric" style="position:fixed;bottom:76px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;background:rgba(0,0,0,.55);color:#ffeaa7;font-weight:700;font-size:16px;padding:6px 14px;border-radius:12px;max-width:90%;text-align:center;font-style:italic"></div>
 <div id="divider" style="position:fixed;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:#ffcc33;display:none;pointer-events:none;z-index:2"></div>
 <div id="inv0" class="inv" style="left:12px"></div>
 <div id="inv1" class="inv" style="left:calc(50% + 12px)"></div>
@@ -92,7 +94,7 @@
       🏫 Your school is hidden inside a giant <b>Clanker warehouse</b>. One of the kids is secretly a <b>robot in disguise</b>, and it can <b>shapeshift</b> into anyone!<br>
       📓 Find the <b>math notebooks</b> and solve them. Get one wrong and the Clanker hears you... <b>CLANK... CLANK...</b> RUN!<br>
       🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote! Or press the <b>🔴 red button</b> in the lunchroom (once per game).<br>
-      🧑‍🏫 <b>Teachers</b> patrol the hallways. No hall pass? Get one from the <b>Principal's Office</b>!<br>🔧 The Clanker can <b>sabotage</b> the school: lights, intercom, boiler, air filters, doors, costumes. Fix it fast!<br>🎒 Grab <b>items</b> you find (carry 3; use with <b>1 2 3</b>). Watch out for <b>Big Brock the bully</b>! Tell a teacher if he bothers you.<br>🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
+      🧑‍🏫 <b>Teachers</b> patrol the hallways. No hall pass? Get one from the <b>Principal's Office</b>!<br>🔧 The Clanker can <b>sabotage</b> the school: lights, intercom, boiler, air filters, doors, costumes. Fix it fast!<br>🤓 <b>Theo the Teacher's Pet</b> gives pop quizzes in the halls: 5 answers in 15 seconds or he tells the Principal!<br>🎒 Grab <b>items</b> you find (carry 3; use with <b>1 2 3</b>). Watch out for <b>Big Brock the bully</b>! Tell a teacher if he bothers you.<br>🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
       🎮 <b>3D view:</b> W/S or ↑/↓ walk, A/D step sideways, ←/→ or drag the mouse to look. <b>Phone:</b> left thumb walks, right thumb looks.<br>Solve: <b>E</b> · Report / button: <b>R</b> · Music: <b>M</b> · Switch 3D/map: <b>V</b> or 🗺️
     </div>
     <div class="ops" style="margin-top:10px">
@@ -118,9 +120,10 @@
     <div style="margin:6px 0 4px;font-weight:700">🎵 Music:
       <select id="musicSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
         <option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option>
-      </select></div>
+      </select>
+      <label style="font-size:15px;margin-left:8px"><input type="checkbox" id="singChk"> 🎤 robot voice sings the lyrics</label></div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v0.9 · Globex Kids · All music is original, made in code</div>
+    <div class="credit">Demo v1.0 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -149,6 +152,20 @@
     <div class="pad" id="codePad"></div>
     <div id="codeMsg" style="margin-top:8px;font-weight:700;min-height:22px"></div>
     <button class="btn gray" id="codeClose" style="font-size:16px;padding:8px 18px">Close</button>
+  </div>
+</div>
+
+<!-- THEO'S POP QUIZ -->
+<div class="overlay" id="quizScreen">
+  <div class="panel" style="max-width:380px">
+    <h2>🤓 Theo's Pop Quiz! <span id="quizWho" style="font-size:15px"></span></h2>
+    <div style="font-size:14px;opacity:.9">Answer 5 questions in 15 seconds or he tells the Principal!</div>
+    <div style="background:#333;border-radius:8px;height:14px;margin:8px 0;overflow:hidden"><div id="quizBar" style="height:100%;background:#f1c40f;width:100%"></div></div>
+    <div style="font-weight:700"><span id="quizCount">Question 1 of 5</span> · ⏱️ <span id="quizTime">15s</span></div>
+    <div id="quizQ" style="font-size:46px;font-weight:800;margin:6px 0">3 + 4 = ?</div>
+    <div id="quizA" style="font-size:34px;font-weight:800;background:#fff;color:#222;border-radius:12px;min-height:50px;width:160px;margin:0 auto 10px"></div>
+    <div class="pad" id="quizPad"></div>
+    <div id="quizMsg" style="margin-top:8px;font-weight:700;min-height:22px"></div>
   </div>
 </div>
 
@@ -535,7 +552,7 @@ function newGame() {
     }
   });
   G = { twoP, humans, emCool: 12, kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
-  initExtras(); initItems();
+  initExtras(); initItems(); initNerd();
   teleportToLunch();
   updateHud();
   setTimeout(() => toast(twoP ? '🔴 The emergency button is in the Lunchroom. Each player can press it once!' : '🔴 The emergency button is in the Lunchroom. You can press it once!'), 800);
@@ -756,6 +773,7 @@ function makeProblem() {
   return { text: `${a} ${sym} ${b} = ?`, r };
 }
 function openNotebook(n, owner = G.player) {
+  if (G.quiz) return;
   if (owner.detT > 0) { toast('⏰ No notebooks in detention!'); return; }
   if (owner.needPass) { toast(`🎫 ${G.twoP ? 'Player ' + (owner.pi + 1) + ' needs' : 'You need'} a hall pass first! Get one from the Principal's Office.`); return; }
   G.nbOpen = n; G.nbOwner = owner; prob = makeProblem(); ans = '';
@@ -802,7 +820,7 @@ $('nbClose').onclick = closeNotebook;
 
 // ================= MEETING =================
 function startMeeting(reporter, statue) {
-  if (G.paused || G.over) return;
+  if (G.paused || G.over || G.quiz) return;
   if (critical()) { if (reporter.isPlayer) toast('🚨 Fix the sabotage first!'); return; }
   if (G.sab) endSabotage();
   G.paused = true; closeNotebook();
@@ -1341,8 +1359,14 @@ function drawView2D(p, vx, vw, s) {
   drawWorld();
   G.statues.forEach(st => { if (canSee(st)) drawStatue(st); });
   const mix = sabOn('mixup');
-  const ents = [...G.kids.filter(k => k.state !== 'out' && (k === p || canSee(k))), ...G.teachers.filter(t => canSee(t)), ...(canSee(G.bully) ? [G.bully] : [])].sort((a, b) => a.y - b.y);
+  const ents = [...G.kids.filter(k => k.state !== 'out' && (k === p || canSee(k))), ...G.teachers.filter(t => canSee(t)), ...(canSee(G.bully) ? [G.bully] : []), ...(canSee(G.nerd) ? [G.nerd] : [])].sort((a, b) => a.y - b.y);
   ents.forEach(k => {
+    if (k.isNerd) {
+      drawKid(k.x, k.y, k.color, 1, '🤓 Theo', k.face, G.t + 5, k.mv);
+      ctx.strokeStyle = '#1b2631'; ctx.lineWidth = 1.2; ctx.strokeRect(k.x - 6.5, k.y - 17.5, 5, 4); ctx.strokeRect(k.x + 1.5, k.y - 17.5, 5, 4);
+      if (k.sayT > 0) { ctx.font = 'bold 11px Trebuchet MS'; const tw = ctx.measureText(k.say).width + 14; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(k.x - tw / 2, k.y - 56, tw, 20, 8); ctx.fill(); ctx.fillStyle = '#1f3a93'; ctx.textAlign = 'center'; ctx.fillText(k.say, k.x, k.y - 42); }
+      return;
+    }
     if (k.isBully) {
       ctx.save(); ctx.translate(k.x, k.y); ctx.scale(1.2, 1.2); drawKid(0, 0, k.color, 1, '😠 Big Brock', k.face, G.t + 3, k.mv); ctx.restore();
       if (k.sayT > 0) { ctx.font = 'bold 11px Trebuchet MS'; const tw = ctx.measureText(k.say).width + 14; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(k.x - tw / 2, k.y - 60, tw, 20, 8); ctx.fill(); ctx.fillStyle = '#c0392b'; ctx.textAlign = 'center'; ctx.fillText(k.say, k.x, k.y - 46); }
@@ -1760,6 +1784,7 @@ function kidModel(L, opts = {}) {
   if (L.style === 3) { hair(L.color); add(bx(8, 1, 12), shade(L.color, .7), 7, 3.2, 0, head); }
   else hair(L.hair);
   if (L.style === 1) add(sp(3.6), L.hair, -9.5, -2, 0, head).scale.set(1, 1.7, 1);
+  if (L.glasses) { const fr = '#1b2631'; for (const z of [-3.2, 3.2]) { add(bx(.8, 3.6, .8), fr, 8.1, 1.2, z - 1.8, head); add(bx(.8, 3.6, .8), fr, 8.1, 1.2, z + 1.8, head); add(bx(.8, .8, 3.6), fr, 8.1, 3, z, head); add(bx(.8, .8, 3.6), fr, 8.1, -.6, z, head); } add(bx(.8, .8, 2.8), fr, 8.1, 1.6, 0, head); }
   if (L.beard) { add(bx(3, 5, 11), L.hair, 6.2, -5.5, 0, head); add(bx(2, 1.5, 7), L.hair, 7.7, -1.8, 0, head); }
   if (L.style === 2) for (const [a, b, c2] of [[-3, 6, -5], [-3, 6, 5], [-6, 3, 0], [1, 7.5, 0], [-6, 1, -5], [-6, 1, 5]]) add(sp(3.8), L.hair, a, b, c2, head);
   if (L.style === 4) { add(bx(3, 13, 2), L.hair, -1.5, -4, -8.3, head); add(bx(3, 13, 2), L.hair, -1.5, -4, 8.3, head); add(bx(2.5, 13, 15), L.hair, -7.4, -3.5, 0, head); }
@@ -1786,6 +1811,7 @@ function build3DGame() {
   const d = R3.dyn; while (d.children.length) d.remove(d.children[0]);
   const spr = (t, w, h, extra) => { const s = new THREE.Sprite(new THREE.SpriteMaterial(Object.assign({ map: t, transparent: true, alphaTest: .05 }, extra || {}))); s.scale.set(w, h, 1); d.add(s); return s; };
   G.kids.forEach(k => { k.lbl = spr(labelTexture(k.name), 30, 6); k.lblKey = ''; k.mdl = null; k.mdlKey = ''; });
+  { const nn = G.nerd; nn.mdl = kidModel(nn.look, { scale: .95, pack: '#2e86c1' }); d.add(nn.mdl.g); nn.lbl = spr(labelTexture('🤓 Theo'), 26, 6); nn.bub = spr(labelTexture(''), 50, 9); nn.bubKey = ''; }
   { const bb = G.bully; bb.mdl = kidModel(bb.look, { scale: 1.3 }); d.add(bb.mdl.g); bb.lbl = spr(labelTexture('😠 Big Brock'), 34, 7); bb.bub = spr(labelTexture(''), 50, 9); bb.bubKey = ''; }
   G.items3 = new Map(); G.alarm3 = new Map(); G.wedge3 = new Map();
   G.teachers.forEach(t => { t.mdl = kidModel(t.look, { adult: true }); d.add(t.mdl.g); t.lbl = spr(labelTexture('🧑‍🏫 ' + t.name), 34, 7); t.bub = spr(labelTexture(''), 44, 9); t.bubKey = ''; });
@@ -1823,6 +1849,8 @@ function update3D(p, vx, vw) {
     t.bub.visible = t.sayT > 0;
     if (t.sayT > 0) { if (t.bubKey !== t.say) { t.bub.material.map = bubbleTexture(t.say); t.bubKey = t.say; } t.bub.position.set(t.x, hOf(t) + 92, zOf(t.y)); }
   });
+  // Theo
+  { const nn = G.nerd; poseModel(nn.mdl, nn, 0, p); nn.lbl.position.set(nn.x, hOf(nn) + 60, zOf(nn.y)); nn.bub.visible = nn.sayT > 0; if (nn.sayT > 0) { if (nn.bubKey !== nn.say) { nn.bub.material.map = bubbleTexture(nn.say); nn.bubKey = nn.say; } nn.bub.position.set(nn.x, hOf(nn) + 72, zOf(nn.y)); } }
   // Big Brock
   { const bb = G.bully; poseModel(bb.mdl, bb, 0, p); bb.lbl.position.set(bb.x, hOf(bb) + 82, zOf(bb.y)); bb.bub.visible = bb.sayT > 0; if (bb.sayT > 0) { if (bb.bubKey !== bb.say) { bb.bub.material.map = bubbleTexture(bb.say); bb.bubKey = bb.say; } bb.bub.position.set(bb.x, hOf(bb) + 94, zOf(bb.y)); } }
   // other player hidden in chalk cloud
@@ -2247,6 +2275,131 @@ function invHud() {
   });
 }
 
+// ================= THEO THE TEACHER'S PET (pop quiz) =================
+const NERD_LOOK = { color: '#a9cce3', hair: '#6b3e26', skin: '#ffe0bd', style: 0, pants: '#7f8c8d', blink: 1.2, glasses: true, tie: '#e74c3c' };
+LOOKS[NERD_LOOK.color] = NERD_LOOK;
+function initNerd() {
+  G.nerd = { name: 'Theo', look: NERD_LOOK, color: NERD_LOOK.color, x: 900, y: 2240, r: 14, state: 'alive', path: [], wait: 1, task: null, solveT: 0, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, id: 50, cd: [8, 8], say: '', sayT: 0, stopT: 0, isNerd: true };
+  G.quiz = null;
+}
+function quickQ() {
+  const ops = G.ops.filter(o => o !== '/'); const op = pick(ops.length ? ops : ['+']); let a, b, r;
+  if (op === '+') { a = randi(1, 9); b = randi(1, 9); r = a + b; }
+  if (op === '-') { a = randi(5, 15); b = randi(1, Math.min(9, a)); r = a - b; }
+  if (op === 'x') { a = randi(2, 5); b = randi(1, 5); r = a * b; }
+  return { text: `${a} ${{ '+': '+', '-': '−', 'x': '×' }[op]} ${b} = ?`, r };
+}
+function updateNerd(dt) {
+  const n = G.nerd; n.sayT -= dt; n.cd = n.cd.map(v => v - dt);
+  if (n.stopT > 0) { n.stopT -= dt; return; }
+  const prey = G.humans.filter(h => h.state === 'alive' && !hidden(h) && h.detT <= 0 && n.cd[h.pi] <= 0 && HALL_KEYS.includes(areaAt(h.x, h.y).key) && dist(h, n) < 230).sort((a, b) => dist(a, n) - dist(b, n))[0];
+  if (prey) {
+    n.replanT = (n.replanT || 0) - dt; if (n.replanT <= 0) { n.path = planPath(n, prey); n.replanT = .5; }
+    followPath(n, dt, 125);
+    if (dist(n, prey) < 40 && !G.quiz && !G.nbOpen && !G.codeOpen) startQuiz(prey);
+    return;
+  }
+  if (n.wait > 0) { n.wait -= dt; return; }
+  if (!n.path.length) n.path = planPath(n, randPointIn(AREAS[pick(HALL_KEYS)]));
+  followPath(n, dt, 80, () => { n.wait = rand(1, 3); });
+}
+function startQuiz(h) {
+  const n = G.nerd; n.say = 'Pop quiz time! 🤓'; n.sayT = 2; n.stopT = 1; n.hd = Math.atan2(h.y - n.y, h.x - n.x); n.path = [];
+  G.quiz = { h, got: 0, t: 15, q: quickQ(), ans: '' }; SFX.ding();
+  $('quizWho').textContent = G.twoP ? `${h.pi === 0 ? '🟦' : '🟥'} Player ${h.pi + 1}` : '';
+  drawQuiz(); $('quizScreen').style.display = 'flex';
+}
+function drawQuiz() {
+  const z = G.quiz; if (!z) return;
+  $('quizQ').textContent = z.q.text; $('quizA').textContent = z.ans; $('quizCount').textContent = `Question ${z.got + 1} of 5`;
+  $('quizBar').style.width = Math.max(0, z.t / 15 * 100) + '%'; $('quizTime').textContent = Math.ceil(Math.max(0, z.t)) + 's';
+}
+function quizKey(k) {
+  const z = G.quiz; if (!z) return;
+  if (k === '⌫') z.ans = z.ans.slice(0, -1);
+  else if (k === '✔') {
+    if (z.ans === '') return;
+    if (+z.ans === z.q.r) { z.got++; tone(880, .08, 'triangle', .15); if (z.got >= 5) return endQuiz(true); }
+    else { SFX.buzz(); $('quizMsg').textContent = `Nope, ${z.q.text.replace('?', z.q.r)}`; }
+    z.q = quickQ(); z.ans = '';
+  } else if (z.ans.length < 3) z.ans += k;
+  drawQuiz();
+}
+function endQuiz(win) {
+  const z = G.quiz, h = z.h, n = G.nerd, who = G.twoP ? 'Player ' + (h.pi + 1) : 'You';
+  G.quiz = null; $('quizScreen').style.display = 'none'; $('quizMsg').textContent = '';
+  n.cd[h.pi] = 45; n.stopT = 1.5;
+  if (win) {
+    n.say = 'Wow, you\'re smart! 🤓'; n.sayT = 2.5; SFX.ding();
+    if (h.inv.length < 3) { const it = pick(ITEM_KEYS); h.inv.push(it); toast(`🤓 Theo: "5 out of 5! Here, take my ${ITEMS[it].name}!" ${ITEMS[it].e}`); }
+    else toast('🤓 Theo: "5 out of 5! Wow, you\'re smart!"');
+    invHud();
+  } else {
+    n.say = "I'm telling the Principal! 📢"; n.sayT = 3;
+    h.detCount++; h.detT = 20 * h.detCount; h.passClock = 0; h.fixing = null;
+    { const hc = hunterOf(h); if (hc) { hc.hunting = false; hc.huntTarget = null; $('huntWarn').style.display = 'none'; } }
+    G.principal.say = 'Theo told me everything. Detention! ⏰'; G.principal.sayT = 3; SFX.buzz();
+    toast(`📢 Theo told the Principal! ${who} ${G.twoP ? 'gets' : 'get'} DETENTION for ${h.detT} seconds!`);
+  }
+}
+// ================= SING-ALONG LYRICS (original, written for Clanker Imposter) =================
+const LYRICS = {
+  Country: [
+    "Well I walked into the lunchroom with my tray of mac and cheese 🎵",
+    "Saw a kid chew on his milk carton, now who'd do that, if you please? 🎵",
+    "His footsteps went clank-clank, and his eyes were blinkin' red 🎵",
+    "There's a Clanker in the cafeteria, that's what my grandpa said! 🎵",
+    "So grab your math notebook, partner, solve it nice and true 🎵",
+    "'Cause if you get it wrong, that robot's comin' after you! 🎵",
+    "Yee-haw, a hall pass in my pocket and my boots upon my feet 🎵",
+    "We're gonna vote that Clanker out before the final bell can beat! 🎵",
+  ],
+  Rock: [
+    "Lockers slam, the lights go out! 🎸",
+    "Somebody's faking, there's no doubt! 🎸",
+    "Two plus two, I've got the key 🎸",
+    "You can't out-think a kid like me! 🎸",
+    "Clank! Clank! I hear you coming 🎸",
+    "Clank! Clank! My heart is drumming 🎸",
+    "Call the meeting, ring the bell 🎸",
+    "Robot, robot, we can tell! 🎸",
+  ],
+  Chill: [
+    "Quiet hallway, sunlight on the floor 🌙",
+    "Notebook open by the library door 🌙",
+    "Seven times six, I take it slow 🌙",
+    "Forty-two... now I know 🌙",
+    "Somewhere far, a robot hums 🌙",
+    "But I stay calm until it comes 🌙",
+    "Breathe in deep and count to ten 🌙",
+    "Then we solve it all again 🌙",
+  ],
+  Arcade: [
+    "Press start, it's a brand new day! 👾",
+    "Globex kids are here to play! 👾",
+    "Climb the stairs and grab a snack 👾",
+    "Fizz Pop sprays the Clankers back! 👾",
+    "Notebook one, notebook two 👾",
+    "Thirty more and then we're through! 👾",
+    "High score, high five, here we go 👾",
+    "Beep boop, Clanker... game over, whoa! 👾",
+  ],
+};
+let SING = false, lastLyric = -1, lastLyricSong = '';
+function lyricTick() {
+  const name = MUSIC.styles[MUSIC.idx], el = $('lyric');
+  if (!G || name === 'Off' || !LYRICS[name] || !ac) { el.style.display = 'none'; return; }
+  const bar = Math.floor(MUSIC.step / 16), idx = Math.floor(bar / 2) % LYRICS[name].length;
+  if (idx !== lastLyric || name !== lastLyricSong) {
+    lastLyric = idx; lastLyricSong = name; el.textContent = '🎤 ' + LYRICS[name][idx];
+    if (SING && window.speechSynthesis && !G.paused) {
+      try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(LYRICS[name][idx].replace(/[^\w\s',.!?-]/g, '')); u.rate = name === 'Chill' ? .85 : 1.05; u.pitch = { Country: .9, Rock: .7, Chill: 1.1, Arcade: 1.6 }[name]; u.volume = .7; speechSynthesis.speak(u); } catch (e) {}
+    }
+  }
+  el.style.display = 'block';
+}
+function setSing(v) { SING = v; $('singBtn').textContent = SING ? '🎤 Singing: on' : '🎤 Singing: off'; if (!SING && window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {} }
+
 // ================= LOOP =================
 let last = performance.now();
 function loop(now) {
@@ -2254,9 +2407,10 @@ function loop(now) {
   if (G) {
     G.t += dt;
     if (G.eject) updateEject(dt);
+    if (G.quiz && !G.paused) { G.quiz.t -= dt; drawQuiz(); if (G.quiz.t <= 0) endQuiz(false); }
     else if (!G.paused && !G.nbOpen && !G.codeOpen) {
       playerMove(dt);
-      updateTeachers(dt); updateSabotage(dt); updateItems(dt);
+      updateTeachers(dt); updateSabotage(dt); updateItems(dt); updateNerd(dt);
       if (G.over) { render(); requestAnimationFrame(loop); return; }
       G.kids.forEach(k => {
         if (k.isPlayer || k.state === 'out') return;
@@ -2291,6 +2445,7 @@ function loop(now) {
     G.fx.forEach(f => f.t -= dt); G.fx = G.fx.filter(f => f.t > 0);
     G.parts.forEach(q => { q.t -= dt; if (q.sx === undefined) { q.x += q.vx * dt; q.y += q.vy * dt; } }); G.parts = G.parts.filter(q => q.t > 0);
   }
+  lyricTick();
   if (G) { sabBanner(); passHud(); if ((G.invTick = (G.invTick || 0) + 1) % 15 === 0) invHud(); }
   render();
   requestAnimationFrame(loop);
@@ -2301,6 +2456,7 @@ requestAnimationFrame(loop);
 window.addEventListener('keydown', e => {
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = true;
   if (!G) return;
+  if (G.quiz) { if (/^[0-9]$/.test(e.key)) quizKey(e.key); else if (e.key === 'Backspace') quizKey('⌫'); else if (e.key === 'Enter') quizKey('✔'); return; }
   if (G.codeOpen) { if (/^[0-9]$/.test(e.key)) codeKey(e.key); else if (e.key === 'Backspace') codeKey('⌫'); else if (e.key === 'Enter') codeKey('✔'); else if (e.key === 'Escape') closeCode(); return; }
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
   if (G.paused) return;
@@ -2319,6 +2475,7 @@ window.addEventListener('keydown', e => {
   }
   if (k === 'e' || k === ' ') { const sp = nearSpot(G.player), rt = nearReportTeacher(G.player); if (sp) useSpot(G.player, sp); else if (rt) bullyToDetention(rt); else if (nearPrincipal(G.player)) getPass(G.player); else { const n = nearNotebook(); if (n) openNotebook(n); } }
   if ('123'.includes(k) && k.length === 1) useItem(G.player, +k - 1);
+  if (k === 'l') setSing(!SING);
   if (k === 'm') setMusic(MUSIC.idx + 1);
   if (k === 'v') setView(VIEW === '3d' ? 'map' : '3d');
   if (k === 'r') { const s = nearStatue(); if (s) startMeeting(G.player, s); else pressEmergency(); }
@@ -2344,6 +2501,8 @@ $('tellBtn').onclick = () => { const rt = nearReportTeacher(G.player); if (rt &&
 $('passBtn').onclick = () => { if (!G.paused) getPass(G.player); };
 $('fixBtn').onclick = () => { const sp = nearSpot(G.player); if (sp && !G.paused) useSpot(G.player, sp); };
 $('codeClose').onclick = closeCode;
+(function () { const pad = $('quizPad'); ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✔'].forEach(k => { const b = document.createElement('button'); b.textContent = k; if (k === '✔') b.className = 'ok'; if (k === '⌫') b.className = 'del'; b.onclick = () => quizKey(k); pad.appendChild(b); }); })();
+$('singBtn').onclick = () => setSing(!SING);
 (function () { const pad = $('codePad'); ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', '✔'].forEach(k => { const b = document.createElement('button'); b.textContent = k; if (k === '✔') b.className = 'ok'; if (k === '⌫') b.className = 'del'; b.onclick = () => codeKey(k); pad.appendChild(b); }); })();
 $('useBtn').onclick = () => { const n = nearNotebook(); if (n && !G.paused) openNotebook(n); };
 $('emBtn').onclick = pressEmergency;
@@ -2352,7 +2511,7 @@ $('musicBtn').onclick = () => setMusic(MUSIC.idx + 1);
 $('viewBtn').onclick = () => setView(VIEW === '3d' ? 'map' : '3d');
 $('musicSel').onchange = () => setMusic(MUSIC.styles.indexOf($('musicSel').value));
 $('playersSel').onchange = () => { $('twoHelp').style.display = $('playersSel').value === '2' ? 'block' : 'none'; };
-$('playBtn').onclick = () => { audio(); SFX.ding(); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); setView(VIEW); };
+$('playBtn').onclick = () => { audio(); SFX.ding(); setSing($('singChk').checked); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); setView(VIEW); };
 $('againBtn').onclick = () => { $('endScreen').style.display = 'none'; newGame(); };
 window.__game = () => G; window.__r3 = () => R3; window.__dbg = { planPath, freeze, startMeeting, playerVote, startSabotage, endSabotage, useSpot, codeKey, openCode }; // for testing
 })();

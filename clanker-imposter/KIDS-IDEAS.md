@@ -103,5 +103,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🎒 3-slot inventory (keys 1 2 3 · Player 2: 8 9 0 · or click), items scattered on both floors and respawning
 - Original Globex Kids items: ⚡ Power Pretzel, 🚪 Door Wedge, 🔑 Janitor's Keys, 🥤 Fizz Pop, 🪙 Lunch Money (+ vending machines), 📼 Hush Tape, ⏰ Wind-Up Alarm, 🧽 Chalk Cloud, ✂️ Safety Scissors, 👢 Stompy Boots, 🍎 Shiny Apple
 
+## Added in v1.0
+- 😠 Big Brock teleports to a new hallway spot every 20 seconds
+- 🤓 Theo the Teacher's Pet (glasses, sweater, tie) roams both floors: 5 pop-quiz answers in 15 s, or he tells the Principal (detention). Pass = he gives you an item
+- 🎤 Original sing-along lyrics for Country, Rock, Chill and Arcade (captions; optional robot singing voice, L to toggle)
+
 ## Still to decide
 - Quick-chat phrases
