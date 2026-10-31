@@ -79,5 +79,11 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
   - 🎭 Costume Chaos (Mushroom Mixup): everyone looks the same for 20 s
 - No meetings during a sabotage; computer kids come help fix
 
+## Added in v0.6
+- 👔 Principal Sprocket works the Hall Pass desk in the Principal's Office: press 🎫 GET HALL PASS (E / F / Enter)
+- ⏱️ Caught without a pass = 10 seconds to get one, or DETENTION in the office: 15 s, then 30, 45, 60… (+15 each time). After detention the Principal gives you a pass
+- Teachers and the Principal are witnesses: the Clanker won't freeze kids in front of them
+- More realistic: real-time wall clocks, windows, EXIT signs, fire extinguishers, water fountains, bulletin board, gym trophy case, plants, footsteps, teacher heel clicks, class-change bell, kids turn to look at you
+
 ## Still to decide
 - Quick-chat phrases
