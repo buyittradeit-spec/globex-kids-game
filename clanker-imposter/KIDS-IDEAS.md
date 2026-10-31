@@ -108,5 +108,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🤓 Theo the Teacher's Pet (glasses, sweater, tie) roams both floors: 5 pop-quiz answers in 15 s, or he tells the Principal (detention). Pass = he gives you an item
 - 🎤 Original sing-along lyrics for Country, Rock, Chill and Arcade (captions; optional robot singing voice, L to toggle)
 
+## Added in v1.1
+- Kids have regular names (Max, Lily, Jayden, Sofia, Noah, Emma…) instead of color names
+- 🧒 Choose how many kids are in the school: 6 to 20 (Clankers limited to 1 per 5 kids)
+- 🎮 Game controller support (Xbox, PlayStation, Switch Pro, USB), 2 controllers for split screen, menus work with the D-pad
+
 ## Still to decide
 - Quick-chat phrases

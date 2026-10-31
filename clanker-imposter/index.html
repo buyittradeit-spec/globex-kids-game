@@ -95,7 +95,7 @@
       📓 Find the <b>math notebooks</b> and solve them. Get one wrong and the Clanker hears you... <b>CLANK... CLANK...</b> RUN!<br>
       🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote! Or press the <b>🔴 red button</b> in the lunchroom (once per game).<br>
       🧑‍🏫 <b>Teachers</b> patrol the hallways. No hall pass? Get one from the <b>Principal's Office</b>!<br>🔧 The Clanker can <b>sabotage</b> the school: lights, intercom, boiler, air filters, doors, costumes. Fix it fast!<br>🤓 <b>Theo the Teacher's Pet</b> gives pop quizzes in the halls: 5 answers in 15 seconds or he tells the Principal!<br>🎒 Grab <b>items</b> you find (carry 3; use with <b>1 2 3</b>). Watch out for <b>Big Brock the bully</b>! Tell a teacher if he bothers you.<br>🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
-      🎮 <b>3D view:</b> W/S or ↑/↓ walk, A/D step sideways, ←/→ or drag the mouse to look. <b>Phone:</b> left thumb walks, right thumb looks.<br>Solve: <b>E</b> · Report / button: <b>R</b> · Music: <b>M</b> · Switch 3D/map: <b>V</b> or 🗺️
+      🎮 <b>Game controllers work too!</b> (Xbox, PlayStation, Switch Pro, USB; 2 controllers for split screen)<br>🎮 <b>3D view:</b> W/S or ↑/↓ walk, A/D step sideways, ←/→ or drag the mouse to look. <b>Phone:</b> left thumb walks, right thumb looks.<br>Solve: <b>E</b> · Report / button: <b>R</b> · Music: <b>M</b> · Switch 3D/map: <b>V</b> or 🗺️
     </div>
     <div class="ops" style="margin-top:10px">
       <div style="font-weight:700">Math in the notebooks:</div>
@@ -107,6 +107,10 @@
     <div style="margin:8px 0 4px;font-weight:700">👥 Players:
       <select id="playersSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
         <option value="1">1 Player</option><option value="2">2 Players (split screen)</option>
+      </select></div>
+    <div style="margin:6px 0 4px;font-weight:700">🧒 Kids in the school:
+      <select id="kidsSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
+        <option>6</option><option>8</option><option>10</option><option>12</option><option>14</option><option>16</option><option>18</option><option selected>20</option>
       </select></div>
     <div style="margin:6px 0 4px;font-weight:700">🤖 Clankers:
       <select id="clankSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
@@ -123,7 +127,7 @@
       </select>
       <label style="font-size:15px;margin-left:8px"><input type="checkbox" id="singChk"> 🎤 robot voice sings the lyrics</label></div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v1.0 · Globex Kids · All music is original, made in code</div>
+    <div class="credit">Demo v1.1 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -499,26 +503,26 @@ function planPath(from, to) {
 
 // ================= GAME STATE =================
 const KID_DEFS = [
-  { name: 'Blue', color: '#3498db', hair: '#3b2414', skin: '#f1c27d', style: 0, pants: '#2c3e50', blink: 0 },
-  { name: 'Red', color: '#e74c3c', hair: '#e8c26a', skin: '#ffdbac', style: 1, pants: '#34495e', blink: 1.1 },
-  { name: 'Green', color: '#2ecc71', hair: '#1a1a1a', skin: '#8d5524', style: 2, pants: '#5d4037', blink: 2.3 },
-  { name: 'Yellow', color: '#f1c40f', hair: '#6b3e26', skin: '#c68642', style: 3, pants: '#1f3a93', blink: .6 },
-  { name: 'Purple', color: '#9b59b6', hair: '#c0541c', skin: '#ffe0bd', style: 4, pants: '#2c3e50', blink: 1.7 },
-  { name: 'Orange', color: '#e67e22', hair: '#2c1608', skin: '#a0662f', style: 0, pants: '#4a4a4a', blink: 2.9 },
-  { name: 'Pink', color: '#ff6fae', hair: '#f5d76e', skin: '#f3c9a8', style: 4, pants: '#34495e', blink: .3 },
-  { name: 'Teal', color: '#1abc9c', hair: '#3e2723', skin: '#7b4a2a', style: 3, pants: '#2c3e50', blink: 2.0 },
-  { name: 'Lime', color: '#a3e635', hair: '#6b3e26', skin: '#f1c27d', style: 2, pants: '#34495e', blink: .8 },
-  { name: 'Navy', color: '#1f3a93', hair: '#1a1a1a', skin: '#ffdbac', style: 0, pants: '#5d4037', blink: 1.4 },
-  { name: 'Maroon', color: '#922b21', hair: '#2c1608', skin: '#c68642', style: 1, pants: '#2c3e50', blink: 2.6 },
-  { name: 'Gold', color: '#d4ac0d', hair: '#e8c26a', skin: '#ffe0bd', style: 3, pants: '#1f3a93', blink: .2 },
-  { name: 'Sky', color: '#5dade2', hair: '#3b2414', skin: '#8d5524', style: 4, pants: '#34495e', blink: 1.0 },
-  { name: 'Coral', color: '#f1948a', hair: '#c0541c', skin: '#f3c9a8', style: 1, pants: '#4a4a4a', blink: 2.2 },
-  { name: 'Mint', color: '#82e0aa', hair: '#1a1a1a', skin: '#a0662f', style: 2, pants: '#2c3e50', blink: 1.6 },
-  { name: 'Violet', color: '#bb8fce', hair: '#2c1608', skin: '#f1c27d', style: 4, pants: '#34495e', blink: .5 },
-  { name: 'Brown', color: '#8b5a2b', hair: '#1a1a1a', skin: '#7b4a2a', style: 0, pants: '#1f3a93', blink: 2.8 },
-  { name: 'Gray', color: '#95a5a6', hair: '#6b3e26', skin: '#ffdbac', style: 3, pants: '#2c3e50', blink: 1.2 },
-  { name: 'Peach', color: '#f8c471', hair: '#f5d76e', skin: '#e0ac69', style: 1, pants: '#5d4037', blink: 3.0 },
-  { name: 'Indigo', color: '#4a235a', hair: '#3e2723', skin: '#c68642', style: 2, pants: '#34495e', blink: .9 },
+  { name: 'Max', color: '#3498db', hair: '#3b2414', skin: '#f1c27d', style: 0, pants: '#2c3e50', blink: 0 },
+  { name: 'Lily', color: '#e74c3c', hair: '#e8c26a', skin: '#ffdbac', style: 1, pants: '#34495e', blink: 1.1 },
+  { name: 'Jayden', color: '#2ecc71', hair: '#1a1a1a', skin: '#8d5524', style: 2, pants: '#5d4037', blink: 2.3 },
+  { name: 'Sofia', color: '#f1c40f', hair: '#6b3e26', skin: '#c68642', style: 3, pants: '#1f3a93', blink: .6 },
+  { name: 'Noah', color: '#9b59b6', hair: '#c0541c', skin: '#ffe0bd', style: 4, pants: '#2c3e50', blink: 1.7 },
+  { name: 'Emma', color: '#e67e22', hair: '#2c1608', skin: '#a0662f', style: 0, pants: '#4a4a4a', blink: 2.9 },
+  { name: 'Liam', color: '#ff6fae', hair: '#f5d76e', skin: '#f3c9a8', style: 4, pants: '#34495e', blink: .3 },
+  { name: 'Ava', color: '#1abc9c', hair: '#3e2723', skin: '#7b4a2a', style: 3, pants: '#2c3e50', blink: 2.0 },
+  { name: 'Mateo', color: '#a3e635', hair: '#6b3e26', skin: '#f1c27d', style: 2, pants: '#34495e', blink: .8 },
+  { name: 'Mia', color: '#1f3a93', hair: '#1a1a1a', skin: '#ffdbac', style: 0, pants: '#5d4037', blink: 1.4 },
+  { name: 'Ethan', color: '#922b21', hair: '#2c1608', skin: '#c68642', style: 1, pants: '#2c3e50', blink: 2.6 },
+  { name: 'Zoe', color: '#d4ac0d', hair: '#e8c26a', skin: '#ffe0bd', style: 3, pants: '#1f3a93', blink: .2 },
+  { name: 'Leo', color: '#5dade2', hair: '#3b2414', skin: '#8d5524', style: 4, pants: '#34495e', blink: 1.0 },
+  { name: 'Chloe', color: '#f1948a', hair: '#c0541c', skin: '#f3c9a8', style: 1, pants: '#4a4a4a', blink: 2.2 },
+  { name: 'Owen', color: '#82e0aa', hair: '#1a1a1a', skin: '#a0662f', style: 2, pants: '#2c3e50', blink: 1.6 },
+  { name: 'Aria', color: '#bb8fce', hair: '#2c1608', skin: '#f1c27d', style: 4, pants: '#34495e', blink: .5 },
+  { name: 'Caleb', color: '#8b5a2b', hair: '#1a1a1a', skin: '#7b4a2a', style: 0, pants: '#1f3a93', blink: 2.8 },
+  { name: 'Nora', color: '#95a5a6', hair: '#6b3e26', skin: '#ffdbac', style: 3, pants: '#2c3e50', blink: 1.2 },
+  { name: 'Isaac', color: '#f8c471', hair: '#f5d76e', skin: '#e0ac69', style: 1, pants: '#5d4037', blink: 3.0 },
+  { name: 'Maya', color: '#4a235a', hair: '#3e2723', skin: '#c68642', style: 2, pants: '#34495e', blink: .9 },
 ];
 let G = null;
 const keys = {};
@@ -529,7 +533,8 @@ function newGame() {
   if ($('opAdd').checked) ops.push('+'); if ($('opSub').checked) ops.push('-');
   if ($('opMul').checked) ops.push('x'); if ($('opDiv').checked) ops.push('/');
   if (!ops.length) ops.push('+');
-  const kids = KID_DEFS.map((d, i) => ({
+  const nKids = Math.max(6, Math.min(20, +$('kidsSel').value || 20));
+  const kids = KID_DEFS.slice(0, nKids).map((d, i) => ({
     id: i, name: d.name, color: d.color, x: 0, y: 0, r: 14, isPlayer: i === 0, isClanker: false,
     state: 'alive', path: [], wait: 0, task: null, solveT: 0, disguise: null, disguiseT: 0,
     saw: null, didNotebook: null, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, bob: rand(0, 6),
@@ -537,7 +542,8 @@ function newGame() {
   const twoP = $('playersSel').value === '2';
   if (twoP) kids[1].isPlayer = true;
   const humans = kids.filter(k => k.isPlayer); humans.forEach((h, i) => { h.pi = i; h.emUses = 1; h.yaw = Math.PI / 2; });
-  const nClank = +$('clankSel').value || 1;
+  const nClank = Math.min(+$('clankSel').value || 1, Math.max(1, Math.floor(nKids / 5)));
+  if (nClank < (+$('clankSel').value || 1)) setTimeout(() => toast(`🤖 With ${nKids} kids the school only has room for ${nClank} Clanker${nClank > 1 ? 's' : ''}.`), 1500);
   const pool = shuffle(kids.filter(k => !k.isPlayer)).slice(0, nClank);
   pool.forEach((c, i) => { c.isClanker = true; Object.assign(c, { cool: 25 + i * 8, hunting: false, huntT: 0, target: null, chaseT: 0, shiftCd: rand(12, 25) + i * 10, replanT: 0, clankT: 0 }); });
   const clanker = pool[0];
@@ -726,7 +732,8 @@ function puff(k) {
 
 // ================= PLAYER =================
 function playerMove(dt) { G.humans.forEach(h => moveHuman(h, dt)); }
-function readCtl(h) {
+function readCtl(h) { return padCtl(h, readKeys(h)); }
+function readKeys(h) {
   const K = n => !!keys[n], c = { fwd: 0, str: 0, turn: 0, ax: 0, ay: 0 };
   if (!G.twoP) {
     if (K('w') || K('ArrowUp')) c.fwd++; if (K('s') || K('ArrowDown')) c.fwd--;
@@ -2400,10 +2407,76 @@ function lyricTick() {
 }
 function setSing(v) { SING = v; $('singBtn').textContent = SING ? '🎤 Singing: on' : '🎤 Singing: off'; if (!SING && window.speechSynthesis) try { speechSynthesis.cancel(); } catch (e) {} }
 
+// ================= GAME CONTROLLERS (Xbox / PlayStation / Switch Pro / USB) =================
+const PADS = { prev: [[], [], [], []], focusEl: null, navT: 0 };
+const getPads = () => (navigator.getGamepads ? [...navigator.getGamepads()].filter(p => p && p.connected) : []);
+const dz = v => Math.abs(v) < .2 ? 0 : v;
+function padFor(h) { const ps = getPads(); return ps[G && G.twoP ? h.pi : 0] || null; }
+function padCtl(h, c) {
+  const gp = padFor(h); if (!gp) return c;
+  const lx = dz(gp.axes[0] || 0), ly = dz(gp.axes[1] || 0), rx = dz(gp.axes[2] || 0);
+  const b = i => gp.buttons[i] && gp.buttons[i].pressed;
+  const dx = (b(15) ? 1 : 0) - (b(14) ? 1 : 0), dy = (b(13) ? 1 : 0) - (b(12) ? 1 : 0);
+  if (lx || ly || dx || dy) { c.str = lx; c.fwd = -(ly || dy); c.ax = lx || dx; c.ay = ly || dy; if (dx && !lx) c.turn += dx; }
+  if (rx) c.turn = rx;
+  return c;
+}
+const OVERLAYS = ['startScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'];
+function openOverlay() { return OVERLAYS.map(id => $(id)).find(el => el && el.style.display === 'flex'); }
+function focusables(ov) { return [...ov.querySelectorAll('button, select, input[type=checkbox], .card:not(.dead)')].filter(el => el.offsetParent !== null); }
+function setFocus(el) { if (PADS.focusEl) PADS.focusEl.style.outline = ''; PADS.focusEl = el; if (el) { el.style.outline = '4px solid #ffcc33'; el.style.outlineOffset = '2px'; el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } }
+function moveFocus(ov, dx, dy) {
+  const els = focusables(ov); if (!els.length) return;
+  if (!PADS.focusEl || !els.includes(PADS.focusEl)) return setFocus(els[0]);
+  const r0 = PADS.focusEl.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  let best = null, bd = 1e9;
+  for (const el of els) { if (el === PADS.focusEl) continue; const r = el.getBoundingClientRect(), x = r.left + r.width / 2 - cx, y = r.top + r.height / 2 - cy;
+    if ((dx && Math.sign(x) !== dx) || (dy && Math.sign(y) !== dy) || (dx && Math.abs(x) < 4) || (dy && Math.abs(y) < 4)) continue;
+    const d = dx ? Math.abs(x) + Math.abs(y) * 3 : Math.abs(y) + Math.abs(x) * 3; if (d < bd) { bd = d; best = el; } }
+  if (best) setFocus(best);
+}
+function pressFocus() {
+  const el = PADS.focusEl; if (!el) return;
+  if (el.tagName === 'SELECT') { el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change')); }
+  else if (el.type === 'checkbox') { el.checked = !el.checked; el.dispatchEvent(new Event('change')); }
+  else el.click();
+}
+function pollPads(dt) {
+  const ps = getPads(); PADS.navT -= dt;
+  ps.forEach((gp, i) => {
+    const prev = PADS.prev[i] || [], now = gp.buttons.map(b => b.pressed), hit = n => now[n] && !prev[n];
+    PADS.prev[i] = now;
+    const ov = openOverlay();
+    if (ov) { // menus: d-pad / stick moves the yellow outline, A presses, B goes back
+      const ax = dz(gp.axes[0] || 0), ay = dz(gp.axes[1] || 0);
+      let dx = (hit(15) ? 1 : 0) - (hit(14) ? 1 : 0), dy = (hit(13) ? 1 : 0) - (hit(12) ? 1 : 0);
+      if (!dx && !dy && PADS.navT <= 0 && (Math.abs(ax) > .6 || Math.abs(ay) > .6)) { if (Math.abs(ax) > Math.abs(ay)) dx = Math.sign(ax); else dy = Math.sign(ay); PADS.navT = .22; }
+      if (dx || dy) moveFocus(ov, dx, dy);
+      if (!PADS.focusEl || !ov.contains(PADS.focusEl)) setFocus(focusables(ov)[0]);
+      if (hit(0)) pressFocus();
+      if (hit(1)) { if (ov.id === 'nbScreen') closeNotebook(); else if (ov.id === 'codeScreen') closeCode(); else if (ov.id === 'quizScreen') quizKey('⌫'); }
+      return;
+    }
+    if (PADS.focusEl) setFocus(null);
+    if (!G || G.paused || G.eject) return;
+    const h = G.twoP ? G.humans[i] : (i === 0 ? G.player : null); if (!h) return;
+    if (hit(0)) humanAct(h, 'solve');          // A / Cross
+    if (hit(1)) humanAct(h, 'report');         // B / Circle
+    if (hit(2)) useItem(h, 0);                 // X / Square
+    if (hit(3)) useItem(h, 1);                 // Y / Triangle
+    if (hit(5)) useItem(h, 2);                 // RB / R1
+    if (hit(8)) setMusic(MUSIC.idx + 1);       // View / Select
+    if (hit(9)) setView(VIEW === '3d' ? 'map' : '3d'); // Menu / Start
+  });
+}
+window.addEventListener('gamepadconnected', e => { try { toast(`🎮 Controller ${e.gamepad.index + 1} connected! Left stick = walk, right stick = look, A = solve, B = report, X/Y/RB = items`); } catch (er) {} });
+function humanAct(h, what) { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); const rt = nearReportTeacher(h); if (rt) return bullyToDetention(rt); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } }
+
 // ================= LOOP =================
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  try { pollPads(dt); } catch (e) {}
   if (G) {
     G.t += dt;
     if (G.eject) updateEject(dt);
@@ -2460,7 +2533,7 @@ window.addEventListener('keydown', e => {
   if (G.codeOpen) { if (/^[0-9]$/.test(e.key)) codeKey(e.key); else if (e.key === 'Backspace') codeKey('⌫'); else if (e.key === 'Enter') codeKey('✔'); else if (e.key === 'Escape') closeCode(); return; }
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
   if (G.paused) return;
-  const act = (h, what) => { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); const rt = nearReportTeacher(h); if (rt) return bullyToDetention(rt); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } };
+  const act = humanAct;
   if (G.twoP) {
     if ('123'.includes(k) && k.length === 1) useItem(G.humans[0], +k - 1);
     if ('890'.includes(k) && k.length === 1) useItem(G.humans[1], { '8': 0, '9': 1, '0': 2 }[k]);
