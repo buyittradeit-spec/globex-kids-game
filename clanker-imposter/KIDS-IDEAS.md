@@ -49,5 +49,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - **Kids win** if they finish ALL the math notebooks OR vote out the Clanker.
 - **The Clanker wins** when it has frozen everyone until only 1 kid is left.
 
+## Added in v0.2 (kids' requests)
+- More realistic look: kids with arms, legs, hair styles and different skin tones; detailed rooms (lockers, lunch trays, basketball court, bookshelves, bathroom stalls, conveyor belts, robot arms)
+- 🔴 Emergency meeting button in the Lunchroom (1 use per game)
+- 🎵 Music: Country, Rock, Chill, Arcade (all original, made in code, no copyright)
+
 ## Still to decide
 - Quick-chat phrases

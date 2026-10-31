@@ -54,11 +54,13 @@
   <div class="pill">📓 <span id="nbText">0/15</span><span id="bar"><span id="barFill"></span></span></div>
   <div class="pill">🧒 Kids left: <span id="kidsLeft">5</span></div>
   <div class="pill">📍 <span id="roomName">Lunchroom</span></div>
+  <div class="pill" id="musicBtn" style="pointer-events:auto;cursor:pointer">🎵 Country</div>
   <div class="pill" id="huntWarn">🔊 CLANK... CLANK... RUN!</div>
 </div>
 <div id="toasts"></div>
 <div id="actions">
   <button class="act" id="reportBtn">🚨 REPORT</button>
+  <button class="act" id="emBtn" style="background:#8e44ad">🔴 MEETING</button>
   <button class="act" id="useBtn">📓 SOLVE</button>
 </div>
 
@@ -70,7 +72,7 @@
     <div class="how">
       🏫 Your school is hidden inside a giant <b>Clanker warehouse</b>. One of the kids is secretly a <b>robot in disguise</b>, and it can <b>shapeshift</b> into anyone!<br>
       📓 Find the <b>math notebooks</b> and solve them. Get one wrong and the Clanker hears you... <b>CLANK... CLANK...</b> RUN!<br>
-      🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote!<br>
+      🧊 The Clanker zaps kids into <b>ice statues</b>. Find one? Hit <b>REPORT</b> for an emergency meeting and vote! Or press the <b>🔴 red button</b> in the lunchroom (once per game).<br>
       🏆 <b>Kids win</b> by solving ALL notebooks or voting out the Clanker. 🤖 <b>The Clanker wins</b> if only 1 kid is left.<br>
       🎮 Move: <b>WASD / arrow keys</b> or drag on the screen. Solve: <b>E</b>. Report: <b>R</b>.
     </div>
@@ -81,8 +83,12 @@
       <label><input type="checkbox" id="opMul" checked>✖️</label>
       <label><input type="checkbox" id="opDiv" checked>➗</label>
     </div>
+    <div style="margin:6px 0 4px;font-weight:700">🎵 Music:
+      <select id="musicSel" style="font:700 18px 'Trebuchet MS';border-radius:10px;padding:4px 8px">
+        <option>Country</option><option>Rock</option><option>Chill</option><option>Arcade</option><option>Off</option>
+      </select></div>
     <button class="btn" id="playBtn">▶ PLAY</button>
-    <div class="credit">Demo v0.1 · Globex Kids</div>
+    <div class="credit">Demo v0.2 · Globex Kids · All music is original, made in code</div>
   </div>
 </div>
 
@@ -168,6 +174,101 @@ const SFX = {
   boing: () => tone(220, 0.25, 'sine', 0.2, 300),
 };
 
+
+// ================= MUSIC (100% original, generated in code) =================
+const MUSIC = { styles: ['Country', 'Rock', 'Chill', 'Arcade', 'Off'], idx: 0, gain: null, timer: null, next: 0, step: 0, mel: {}, noiseBuf: null };
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+const CH = { maj: [0, 4, 7], min: [0, 3, 7], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
+const SONGS = {
+  Country: { bpm: 112, prog: [[43, 'maj'], [48, 'maj'], [50, 'maj'], [43, 'maj'], [48, 'maj'], [43, 'maj'], [50, 'maj'], [43, 'maj']], scale: [0, 2, 4, 7, 9], melOct: 31, density: .45 },
+  Rock:    { bpm: 132, prog: [[40, 'min'], [36, 'maj'], [38, 'maj'], [45, 'min']], scale: [0, 3, 5, 7, 10], melOct: 36, density: .35 },
+  Chill:   { bpm: 78,  prog: [[53, 'maj7'], [52, 'm7'], [50, 'm7'], [48, 'maj7']], scale: [0, 2, 4, 7, 9], melOct: 19, density: .22 },
+  Arcade:  { bpm: 140, prog: [[48, 'maj'], [45, 'min'], [41, 'maj'], [43, 'maj']], scale: [0, 2, 4, 7, 9], melOct: 24, density: .5 },
+};
+function genMelody(song) {
+  // random walk on the scale, made fresh each time the game loads
+  const bars = song.prog.length, out = []; let deg = 2;
+  for (let b = 0; b < bars; b++) {
+    const bar = new Array(16).fill(null);
+    for (let i = 0; i < 16; i += 2) {
+      if (Math.random() < song.density || i === 0) { deg = Math.max(0, Math.min(9, deg + randi(-2, 2))); bar[i] = deg; }
+    }
+    out.push(bar);
+  }
+  return out;
+}
+function mOsc(type, freq, t, dur, vol, glide, filt) {
+  const a = ac, o = a.createOscillator(), g = a.createGain(); let node = o;
+  o.type = type;
+  if (glide) { o.frequency.setValueAtTime(freq * glide, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.04); } else o.frequency.setValueAtTime(freq, t);
+  if (filt) { const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(filt, t); f.frequency.exponentialRampToValueAtTime(Math.max(200, filt / 4), t + dur); o.connect(f); node = f; }
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  node.connect(g); g.connect(MUSIC.gain); o.start(t); o.stop(t + dur + 0.05);
+}
+function mNoise(t, dur, vol, freq, type = 'highpass') {
+  const a = ac;
+  if (!MUSIC.noiseBuf) { const len = a.sampleRate; MUSIC.noiseBuf = a.createBuffer(1, len, a.sampleRate); const d = MUSIC.noiseBuf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1; }
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  s.buffer = MUSIC.noiseBuf; f.type = type; f.frequency.value = freq;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(MUSIC.gain); s.start(t, Math.random() * .5); s.stop(t + dur + .02);
+}
+const kick = (t, v = .5) => { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + .12); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + .18); o.connect(g); g.connect(MUSIC.gain); o.start(t); o.stop(t + .2); };
+const snare = (t, v = .25) => { mNoise(t, .14, v, 1800); mOsc('triangle', 190, t, .08, v * .5); };
+const hat = (t, v = .08) => mNoise(t, .04, v, 7000);
+function playStep(name, step, t) {
+  const S = SONGS[name], bar = Math.floor(step / 16) % S.prog.length, i = step % 16;
+  const [root, q] = S.prog[bar], tones = CH[q], sixteenth = 60 / S.bpm / 4;
+  const melNote = MUSIC.mel[name][bar][i];
+  const melFreq = melNote == null ? 0 : mtof(S.melOct + 36 + S.scale[melNote % 5] + 12 * Math.floor(melNote / 5));
+  if (name === 'Country') {
+    if (i === 0 || i === 8) { mOsc('triangle', mtof(root + (i === 8 ? 7 : 0)), t, .35, .32); kick(t, .35); }
+    if (i === 4 || i === 12) { tones.forEach((n, k) => mOsc('triangle', mtof(root + 24 + n), t + k * .012, .12, .07)); mNoise(t, .09, .12, 3000); }
+    if (i % 4 === 2) hat(t, .05);
+    if (melFreq) mOsc('sawtooth', melFreq, t, sixteenth * 2.2, .06, 0.94, 2600); // twangy pluck
+  } else if (name === 'Rock') {
+    if (i % 2 === 0) { mOsc('sawtooth', mtof(root + 12), t, sixteenth * 1.6, .07, 0, 1400); mOsc('sawtooth', mtof(root + 19), t, sixteenth * 1.6, .05, 0, 1400); mOsc('square', mtof(root), t, sixteenth * 1.8, .1, 0, 600); }
+    if (i === 0 || i === 6 || i === 8) kick(t, .55);
+    if (i === 4 || i === 12) snare(t, .3);
+    if (i % 2 === 0) hat(t, .07);
+    if (melFreq && bar % 2 === 1) mOsc('square', melFreq, t, sixteenth * 2.5, .045, 0, 3000);
+  } else if (name === 'Chill') {
+    if (i === 0) { tones.forEach(n => mOsc('sine', mtof(root + 12 + n), t, sixteenth * 15, .05)); mOsc('sine', mtof(root - 12), t, sixteenth * 7, .25); }
+    if (i === 8) mOsc('sine', mtof(root - 12 + 7), t, sixteenth * 6, .18);
+    if (i === 0 || i === 10) kick(t, .3);
+    if (i === 8) snare(t, .1);
+    if (i % 4 === 2) hat(t, .04);
+    if (melFreq) mOsc('triangle', melFreq, t, sixteenth * 3, .06);
+  } else if (name === 'Arcade') {
+    mOsc('square', mtof(root + 24 + tones[i % tones.length] + (i % 6 > 2 ? 12 : 0)), t, sixteenth * .8, .025);
+    if (i % 4 === 0) mOsc('triangle', mtof(root), t, sixteenth * 3, .3);
+    if (i === 0 || i === 8) kick(t, .35);
+    if (i === 4 || i === 12) mNoise(t, .08, .15, 2500);
+    if (melFreq) mOsc('square', melFreq, t, sixteenth * 1.8, .05);
+  }
+}
+function musicTick() {
+  const name = MUSIC.styles[MUSIC.idx];
+  if (!ac || name === 'Off') return;
+  const S = SONGS[name], sixteenth = 60 / S.bpm / 4;
+  if (MUSIC.next < ac.currentTime) MUSIC.next = ac.currentTime + .05;
+  while (MUSIC.next < ac.currentTime + .15) { playStep(name, MUSIC.step, MUSIC.next); MUSIC.next += sixteenth; MUSIC.step++; }
+  const target = (G && G.clanker && G.clanker.hunting) ? .12 : (G && G.paused && !G.over ? .25 : .45);
+  MUSIC.gain.gain.setTargetAtTime(target, ac.currentTime, .3);
+}
+function musicStart() {
+  if (!audio()) return;
+  if (!MUSIC.gain) { MUSIC.gain = ac.createGain(); MUSIC.gain.gain.value = .45; MUSIC.gain.connect(ac.destination); for (const n in SONGS) MUSIC.mel[n] = genMelody(SONGS[n]); }
+  if (!MUSIC.timer) MUSIC.timer = setInterval(musicTick, 30);
+}
+function setMusic(i) {
+  MUSIC.idx = (i + MUSIC.styles.length) % MUSIC.styles.length; MUSIC.step = 0;
+  const n = MUSIC.styles[MUSIC.idx];
+  $('musicBtn').textContent = n === 'Off' ? '🔇 Music: Off' : `🎵 ${n}`;
+  if ($('musicSel')) $('musicSel').value = n;
+  musicStart();
+}
+
 // ================= MAP =================
 const AREAS = {
   classroom: { name: 'Classroom', x1: 150, y1: 120, x2: 550, y2: 420, door: 350, side: 'b' },
@@ -232,8 +333,12 @@ function planPath(from, to) {
 
 // ================= GAME STATE =================
 const KID_DEFS = [
-  { name: 'Blue', color: '#3498db' }, { name: 'Red', color: '#e74c3c' }, { name: 'Green', color: '#2ecc71' },
-  { name: 'Yellow', color: '#f1c40f' }, { name: 'Purple', color: '#9b59b6' }, { name: 'Orange', color: '#e67e22' },
+  { name: 'Blue', color: '#3498db', hair: '#3b2414', skin: '#f1c27d', style: 0, pants: '#2c3e50', blink: 0 },
+  { name: 'Red', color: '#e74c3c', hair: '#e8c26a', skin: '#ffdbac', style: 1, pants: '#34495e', blink: 1.1 },
+  { name: 'Green', color: '#2ecc71', hair: '#1a1a1a', skin: '#8d5524', style: 2, pants: '#5d4037', blink: 2.3 },
+  { name: 'Yellow', color: '#f1c40f', hair: '#6b3e26', skin: '#c68642', style: 3, pants: '#1f3a93', blink: .6 },
+  { name: 'Purple', color: '#9b59b6', hair: '#c0541c', skin: '#ffe0bd', style: 4, pants: '#2c3e50', blink: 1.7 },
+  { name: 'Orange', color: '#e67e22', hair: '#2c1608', skin: '#a0662f', style: 0, pants: '#4a4a4a', blink: 2.9 },
 ];
 let G = null;
 const keys = {};
@@ -260,9 +365,10 @@ function newGame() {
       notebooks.push({ x: p.x, y: p.y, done: false, area: k });
     }
   });
-  G = { kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
+  G = { emUses: 1, emCool: 12, kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
   teleportToLunch();
   updateHud();
+  setTimeout(() => toast('🔴 The emergency button is in the Lunchroom. You can press it once!'), 800);
 }
 function teleportToLunch() {
   const spots = [];
@@ -423,6 +529,9 @@ function playerMove(dt) {
   p.moving = m > 0.1;
 }
 function nearNotebook() { const p = G.player; return G.notebooks.find(n => !n.done && dist(n, p) < 48); }
+const EM_BTN = { x: 750, y: 262 };
+function nearEmButton() { const p = G.player; return p.state === 'alive' && G.emUses > 0 && G.emCool <= 0 && dist(EM_BTN, p) < 55; }
+function pressEmergency() { if (!nearEmButton() || G.paused) return; G.emUses--; startMeeting(G.player, null); }
 function nearStatue() { const p = G.player; if (p.state !== 'alive') return null; return G.statues.find(s => !s.reported && dist(s, p) < 75); }
 
 // ---- notebook modal ----
@@ -486,7 +595,7 @@ function startMeeting(reporter, statue) {
   SFX.bell();
   const m = G.meeting = { votes: {}, playerVote: null, phase: 'talk', timer: null };
   $('mtgTitle').textContent = '🔔 EMERGENCY MEETING!';
-  $('mtgSub').textContent = `${reporter.isPlayer ? 'You' : reporter.name} found ${statue.name} frozen in the ${statue.area}! 🧊`;
+  $('mtgSub').textContent = statue ? `${reporter.isPlayer ? 'You' : reporter.name} found ${statue.name} frozen in the ${statue.area}! 🧊` : `${reporter.isPlayer ? 'You' : reporter.name} pressed the EMERGENCY BUTTON! 🔴`;
   $('chat').innerHTML = ''; $('mtgInfo').textContent = 'Listen to what everyone says...';
   $('skipBtn').style.display = 'none';
   renderCards();
@@ -591,7 +700,7 @@ function endMeeting() {
   G.statues = []; G.kids.forEach(k => { k.saw = null; k.didNotebook = null; });
   const c = G.clanker; c.cool = 20; c.hunting = false; c.target = null; c.path = [];
   if (c.disguise) c.disguise = null;
-  teleportToLunch(); G.paused = false; updateHud(); checkWin();
+  G.emCool = 12; teleportToLunch(); G.paused = false; updateHud(); checkWin();
 }
 $('skipBtn').onclick = () => playerVote('skip');
 
@@ -612,84 +721,214 @@ function endGame(kidsWin, msg) {
 }
 
 // ================= DRAWING =================
-function drawKid(x, y, color, alpha, label, face, bob, moving, robot) {
+const LOOKS = {};
+KID_DEFS.forEach(d => LOOKS[d.color] = d);
+const lookOf = c => LOOKS[c] || { color: c, hair: '#333', skin: '#f1c27d', style: 0, pants: '#34495e' };
+function shade(hex, f) { const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255; r = Math.min(255, Math.max(0, r * f)); g = Math.min(255, Math.max(0, g * f)); b = Math.min(255, Math.max(0, b * f)); return `rgb(${r | 0},${g | 0},${b | 0})`; }
+function drawKid(x, y, color, alpha, label, face, anim, moving, robot) {
+  const L = lookOf(color), t = G ? G.t : 0;
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y);
-  const b = moving ? Math.sin(bob * 12) * 2 : 0;
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 14, 13, 5, 0, 0, 6.3); ctx.fill();
+  const sw = moving ? Math.sin(anim * 11) : 0, b = moving ? -Math.abs(Math.sin(anim * 11)) * 1.5 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.beginPath(); ctx.ellipse(0, 15, 12, 4.5, 0, 0, 6.3); ctx.fill();
   if (robot) {
-    ctx.fillStyle = '#95a5a6'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2;
-    ctx.fillRect(-12, -6 + b, 24, 20); ctx.strokeRect(-12, -6 + b, 24, 20);
-  } else {
-    ctx.fillStyle = color; ctx.beginPath(); ctx.roundRect(-12, -4 + b, 24, 18, 7); ctx.fill();
-    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 2; ctx.stroke();
-    // head
-    ctx.fillStyle = '#f5cba7'; ctx.beginPath(); ctx.arc(0, -13 + b, 10, 0, 6.3); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(0, -16 + b, 10, Math.PI, 0); ctx.fill(); // hair/cap
-    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(face * 3 - 3, -12 + b, 1.8, 0, 6.3); ctx.arc(face * 3 + 3, -12 + b, 1.8, 0, 6.3); ctx.fill();
+    ctx.fillStyle = '#7f8c8d'; ctx.fillRect(-7, 4 + b, 5, 10 + sw * 2); ctx.fillRect(2, 4 + b, 5, 10 - sw * 2);
+    const g = ctx.createLinearGradient(-12, 0, 12, 0); g.addColorStop(0, '#95a5a6'); g.addColorStop(.5, '#ecf0f1'); g.addColorStop(1, '#7f8c8d');
+    ctx.fillStyle = g; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(-12, -8 + b, 24, 15, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e74c3c'; ctx.fillRect(-4, -4 + b, 8, 4); ctx.fillStyle = '#f1c40f'; ctx.fillRect(-8, 1 + b, 3, 3); ctx.fillRect(5, 1 + b, 3, 3);
+    ctx.restore(); return;
   }
-  if (label) { ctx.globalAlpha = alpha; ctx.font = 'bold 11px Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillStyle = '#000'; ctx.fillText(label, 1, 31); ctx.fillStyle = '#fff'; ctx.fillText(label, 0, 30); }
+  // legs + shoes
+  ctx.fillStyle = L.pants; ctx.fillRect(-7, 4 + b, 5, 9 + sw * 2); ctx.fillRect(2, 4 + b, 5, 9 - sw * 2);
+  ctx.fillStyle = '#1c1c1c'; ctx.beginPath(); ctx.roundRect(-8, 12 + b + sw * 2, 7, 3.5, 1.5); ctx.roundRect(1, 12 + b - sw * 2, 7, 3.5, 1.5); ctx.fill();
+  // arms
+  ctx.fillStyle = shade(L.color, .85); ctx.fillRect(-14, -5 + b - sw * 2, 4, 9); ctx.fillRect(10, -5 + b + sw * 2, 4, 9);
+  ctx.fillStyle = L.skin; ctx.beginPath(); ctx.arc(-12, 5 + b - sw * 2, 2.6, 0, 6.3); ctx.arc(12, 5 + b + sw * 2, 2.6, 0, 6.3); ctx.fill();
+  // shirt
+  const sg = ctx.createLinearGradient(0, -8, 0, 8); sg.addColorStop(0, shade(L.color, 1.15)); sg.addColorStop(1, shade(L.color, .8));
+  ctx.fillStyle = sg; ctx.beginPath(); ctx.roundRect(-10, -8 + b, 20, 14, 5); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.moveTo(-4, -8 + b); ctx.lineTo(0, -4 + b); ctx.lineTo(4, -8 + b); ctx.fill();
+  // neck + head
+  ctx.fillStyle = shade(L.skin, .85); ctx.fillRect(-2.5, -11 + b, 5, 4);
+  ctx.fillStyle = L.skin; ctx.beginPath(); ctx.arc(-9, -15 + b, 2.4, 0, 6.3); ctx.arc(9, -15 + b, 2.4, 0, 6.3); ctx.fill();
+  ctx.beginPath(); ctx.arc(0, -16 + b, 9, 0, 6.3); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.stroke();
+  // hair styles
+  ctx.fillStyle = L.hair;
+  if (L.style === 0) { ctx.beginPath(); ctx.arc(0, -18 + b, 9.4, Math.PI * 1.02, Math.PI * 1.98); ctx.fill(); ctx.fillRect(-9, -21 + b, 18, 3); }
+  if (L.style === 1) { ctx.beginPath(); ctx.arc(0, -18 + b, 9.6, Math.PI, 0); ctx.fill(); ctx.beginPath(); ctx.ellipse(-face * 10, -14 + b, 3.5, 6, -face * .4, 0, 6.3); ctx.fill(); }
+  if (L.style === 2) { for (const [hx, hy] of [[-7, -20], [-3, -24], [2, -24], [7, -20], [0, -22], [-8, -15], [8, -15]]) { ctx.beginPath(); ctx.arc(hx, hy + b, 4.2, 0, 6.3); ctx.fill(); } }
+  if (L.style === 3) { ctx.fillStyle = L.color; ctx.beginPath(); ctx.arc(0, -18 + b, 9.4, Math.PI, 0); ctx.fill(); ctx.fillStyle = shade(L.color, .7); ctx.beginPath(); ctx.ellipse(face * 7, -18 + b, 7, 2.5, 0, 0, 6.3); ctx.fill(); }
+  if (L.style === 4) { ctx.beginPath(); ctx.arc(0, -18 + b, 9.8, Math.PI * .95, Math.PI * 2.05); ctx.fill(); ctx.fillRect(-10, -18 + b, 4, 12); ctx.fillRect(6, -18 + b, 4, 12); }
+  // face
+  const blink = (t + (L.blink || 0)) % 3.6 < .13;
+  ctx.fillStyle = '#222';
+  if (blink) { ctx.fillRect(face * 2 - 5, -15 + b, 4, 1.2); ctx.fillRect(face * 2 + 1, -15 + b, 4, 1.2); }
+  else { ctx.beginPath(); ctx.arc(face * 2 - 3, -15 + b, 1.7, 0, 6.3); ctx.arc(face * 2 + 3, -15 + b, 1.7, 0, 6.3); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillRect(face * 2 - 3, -16.2 + b, .9, .9); ctx.fillRect(face * 2 + 3, -16.2 + b, .9, .9); }
+  ctx.strokeStyle = 'rgba(120,40,40,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(face * 2, -12.5 + b, 2.2, .2, Math.PI - .2); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,120,120,.25)'; ctx.beginPath(); ctx.arc(face * 2 - 6, -12 + b, 1.8, 0, 6.3); ctx.arc(face * 2 + 6, -12 + b, 1.8, 0, 6.3); ctx.fill();
+  if (label) { ctx.font = 'bold 10px Trebuchet MS'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.8)'; ctx.strokeText(label, 0, 29); ctx.fillStyle = '#fff'; ctx.fillText(label, 0, 29); }
   ctx.restore();
 }
 function drawRobotHead(x, y, rot) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-  ctx.fillStyle = '#bdc3c7'; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 2;
-  ctx.fillRect(-11, -10, 22, 18); ctx.strokeRect(-11, -10, 22, 18);
-  ctx.fillStyle = '#e74c3c'; ctx.fillRect(-7, -5, 5, 4); ctx.fillRect(2, -5, 5, 4);
+  const g = ctx.createLinearGradient(-11, 0, 11, 0); g.addColorStop(0, '#95a5a6'); g.addColorStop(.5, '#ecf0f1'); g.addColorStop(1, '#7f8c8d');
+  ctx.fillStyle = g; ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(-11, -10, 22, 18, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e74c3c'; ctx.shadowColor = '#f00'; ctx.shadowBlur = 6; ctx.fillRect(-7, -5, 5, 4); ctx.fillRect(2, -5, 5, 4); ctx.shadowBlur = 0;
+  ctx.fillStyle = '#2c3e50'; for (let i = -6; i <= 4; i += 3) ctx.fillRect(i, 3, 2, 2);
   ctx.beginPath(); ctx.moveTo(0, -10); ctx.lineTo(0, -20); ctx.stroke();
   ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(0, -21, 3, 0, 6.3); ctx.fill();
   ctx.restore();
 }
 function drawStatue(s) {
+  drawKid(s.x, s.y, s.color, 0.85, s.name, 1, 0, false);
   ctx.save();
-  drawKid(s.x, s.y, s.color, 0.9, s.name, 1, 0, false);
-  ctx.fillStyle = 'rgba(160,220,255,.55)'; ctx.strokeStyle = '#e0f6ff'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.roundRect(s.x - 18, s.y - 28, 36, 46, 6); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#fff'; const tw = (G.t * 3) % 6;
-  ctx.fillRect(s.x - 10 + tw, s.y - 22, 2, 6); ctx.fillRect(s.x + 8, s.y - 4 - tw, 2, 5);
+  const g = ctx.createLinearGradient(s.x - 18, s.y - 32, s.x + 18, s.y + 18);
+  g.addColorStop(0, 'rgba(220,245,255,.75)'); g.addColorStop(.5, 'rgba(140,210,250,.45)'); g.addColorStop(1, 'rgba(90,170,230,.65)');
+  ctx.fillStyle = g; ctx.strokeStyle = '#e8f8ff'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(s.x - 16, s.y - 30); ctx.lineTo(s.x + 12, s.y - 33); ctx.lineTo(s.x + 19, s.y - 5); ctx.lineTo(s.x + 16, s.y + 17); ctx.lineTo(s.x - 17, s.y + 18); ctx.lineTo(s.x - 20, s.y - 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(s.x - 6, s.y - 28); ctx.lineTo(s.x - 2, s.y - 14); ctx.lineTo(s.x - 9, s.y - 4); ctx.stroke();
+  const tw = (G.t * 2) % 1; ctx.fillStyle = `rgba(255,255,255,${1 - tw})`;
+  ctx.beginPath(); ctx.arc(s.x + 9, s.y - 24, 2 + tw * 2, 0, 6.3); ctx.fill();
   ctx.restore();
 }
+// ---------- static map, drawn once for speed ----------
+let STATIC = null; const ST = { x0: -350, y0: -250, w: 2100, h: 1400, sc: 1.25 };
+function buildStatic() {
+  const oc = document.createElement('canvas'); oc.width = ST.w * ST.sc; oc.height = ST.h * ST.sc;
+  const c = oc.getContext('2d'); c.scale(ST.sc, ST.sc); c.translate(-ST.x0, -ST.y0);
+  const R = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  // outside warehouse: concrete + grid + stripes
+  R(ST.x0, ST.y0, ST.w, ST.h, '#3a3c40');
+  for (let i = 0; i < 1400; i++) { c.fillStyle = `rgba(${Math.random() < .5 ? '255,255,255' : '0,0,0'},.04)`; c.fillRect(rand(ST.x0, ST.x0 + ST.w), rand(ST.y0, ST.y0 + ST.h), rand(2, 9), rand(2, 9)); }
+  c.strokeStyle = 'rgba(0,0,0,.25)'; c.lineWidth = 2;
+  for (let x = ST.x0; x < ST.x0 + ST.w; x += 100) { c.beginPath(); c.moveTo(x, ST.y0); c.lineTo(x, ST.y0 + ST.h); c.stroke(); }
+  for (let y = ST.y0; y < ST.y0 + ST.h; y += 100) { c.beginPath(); c.moveTo(ST.x0, y); c.lineTo(ST.x0 + ST.w, y); c.stroke(); }
+  const hazard = (x, y, w, h) => { c.save(); c.beginPath(); c.rect(x, y, w, h); c.clip(); R(x, y, w, h, '#f1c40f'); c.fillStyle = '#222'; for (let i = x - h; i < x + w + h; i += 24) { c.beginPath(); c.moveTo(i, y + h); c.lineTo(i + 12, y + h); c.lineTo(i + 12 + h, y); c.lineTo(i + h, y); c.fill(); } c.restore(); };
+  hazard(130, 96, 1140, 10); hazard(130, 794, 1140, 10); hazard(126, 100, 10, 700); hazard(1264, 100, 10, 700);
+  // pipes along ceiling edges
+  for (const py of [-150, -120]) { const pg = c.createLinearGradient(0, py - 8, 0, py + 8); pg.addColorStop(0, '#888'); pg.addColorStop(.5, '#ddd'); pg.addColorStop(1, '#666'); c.fillStyle = pg; c.fillRect(-300, py - 8, 2000, 16); }
+  // stacks of robot part boxes outside
+  for (const [bx, by] of [[-120, 180], [-120, 260], [-60, 220], [1350, 560], [1420, 600], [1350, 640], [-140, 600], [1400, 200]]) { R(bx, by, 50, 50, '#8b5a2b'); c.strokeStyle = '#4e2f12'; c.lineWidth = 3; c.strokeRect(bx, by, 50, 50); c.fillStyle = '#4e2f12'; c.font = 'bold 9px Trebuchet MS'; c.textAlign = 'center'; c.fillText('PARTS', bx + 25, by + 29); }
+  // sign
+  c.fillStyle = '#7b1e1e'; c.beginPath(); c.roundRect(505, -15, 390, 60, 10); c.fill(); R(515, -7, 370, 44, '#c0392b');
+  c.fillStyle = '#fff'; c.font = 'bold 30px Trebuchet MS'; c.textAlign = 'center'; c.fillText('⚙ CLANKER CO. ⚙', 700, 26);
+  // ===== FLOORS =====
+  const A = AREAS;
+  // classroom wood planks
+  R(A.classroom.x1, A.classroom.y1, 400, 300, '#c49a62');
+  for (let y = A.classroom.y1, row = 0; y < A.classroom.y2; y += 20, row++) { c.fillStyle = row % 2 ? 'rgba(0,0,0,.06)' : 'rgba(255,255,255,.04)'; c.fillRect(A.classroom.x1, y, 400, 20); c.fillStyle = 'rgba(60,30,10,.35)'; c.fillRect(A.classroom.x1, y, 400, 1); for (let x = A.classroom.x1 + (row % 3) * 47; x < A.classroom.x2; x += 140) c.fillRect(x, y, 1, 20); }
+  // lunchroom tiles
+  for (let x = A.lunch.x1; x < A.lunch.x2; x += 40) for (let y = A.lunch.y1; y < A.lunch.y2; y += 40) { R(x, y, 40, 40, ((x + y) / 40) % 2 ? '#e9eef0' : '#c9d6dc'); c.strokeStyle = 'rgba(0,0,0,.08)'; c.lineWidth = 1; c.strokeRect(x, y, 40, 40); }
+  // gym hardwood
+  R(A.gym.x1, A.gym.y1, 300, 300, '#d9a35f');
+  for (let x = A.gym.x1; x < A.gym.x2; x += 16) { c.fillStyle = (x / 16) % 2 ? 'rgba(0,0,0,.05)' : 'rgba(255,255,255,.05)'; c.fillRect(x, A.gym.y1, 16, 300); c.fillStyle = 'rgba(90,50,10,.25)'; c.fillRect(x, A.gym.y1, 1, 300); }
+  c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 3; c.strokeRect(968, 140, 264, 262);
+  c.beginPath(); c.moveTo(968, 300); c.lineTo(1232, 300); c.stroke(); c.beginPath(); c.arc(1100, 300, 36, 0, 6.3); c.stroke();
+  c.fillStyle = 'rgba(192,57,43,.55)'; c.fillRect(1065, 140, 70, 75); c.strokeRect(1065, 140, 70, 75);
+  c.beginPath(); c.arc(1100, 215, 35, 0, Math.PI); c.stroke(); c.beginPath(); c.arc(1100, 140, 110, 0, Math.PI); c.stroke();
+  // library carpet
+  R(A.library.x1, A.library.y1, 500, 280, '#6d3f4a');
+  c.fillStyle = 'rgba(255,255,255,.05)'; for (let x = A.library.x1; x < A.library.x2; x += 24) for (let y = A.library.y1; y < A.library.y2; y += 24) { c.beginPath(); c.moveTo(x + 12, y + 4); c.lineTo(x + 20, y + 12); c.lineTo(x + 12, y + 20); c.lineTo(x + 4, y + 12); c.fill(); }
+  c.fillStyle = '#2e6b8a'; c.beginPath(); c.ellipse(400, 660, 95, 55, 0, 0, 6.3); c.fill(); c.strokeStyle = '#f1c40f'; c.lineWidth = 4; c.stroke();
+  // bathroom tiles
+  for (let x = A.bath.x1; x < A.bath.x2; x += 20) for (let y = A.bath.y1; y < A.bath.y2; y += 20) { R(x, y, 20, 20, (x / 20 + y / 20) % 2 ? '#e9f2f8' : '#dbe8f1'); c.strokeStyle = '#b8c7d3'; c.lineWidth = 1; c.strokeRect(x, y, 20, 20); }
+  // warehouse floor concrete
+  R(A.warehouse.x1, A.warehouse.y1, 350, 280, '#80878d');
+  for (let i = 0; i < 200; i++) { c.fillStyle = `rgba(0,0,0,${rand(.03, .1)})`; c.beginPath(); c.arc(rand(650, 1000), rand(500, 780), rand(1, 4), 0, 6.3); c.fill(); }
+  c.strokeStyle = 'rgba(0,0,0,.3)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(700, 760); c.lineTo(730, 740); c.lineTo(728, 720); c.lineTo(760, 700); c.stroke();
+  hazard(660, 600, 330, 6); hazard(660, 690, 330, 6);
+  // hallway linoleum
+  R(A.hall.x1, A.hall.y1, 1100, 80, '#d6d4cc');
+  for (let x = A.hall.x1; x < A.hall.x2; x += 30) { c.fillStyle = (x / 30) % 2 ? 'rgba(0,0,0,.04)' : 'rgba(255,255,255,.05)'; c.fillRect(x, A.hall.y1, 30, 80); }
+  for (let i = 0; i < 300; i++) { c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(rand(150, 1250), rand(420, 500), 1.5, 1.5); }
+  // lockers along the hall (skip door gaps)
+  const lockerRow = (y, h, gaps) => { for (let x = 160; x < 1240; x += 22) { if (gaps.some(([g0, g1]) => x + 20 > g0 && x < g1)) continue; c.fillStyle = (x / 22) % 3 < 1 ? '#2f6f9f' : '#2a6390'; c.fillRect(x, y, 20, h); c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(x + 3, y + 3, 14, 1.5); c.fillRect(x + 3, y + 6, 14, 1.5); c.fillStyle = '#ccc'; c.fillRect(x + 15, y + h / 2, 2, 4); } };
+  lockerRow(428, 12, [[300, 400], [690, 810], [1050, 1150], [640, 1010]]);
+  lockerRow(482, 11, [[350, 450], [640, 1010], [1075, 1175]]);
+  // ===== FURNITURE =====
+  // classroom
+  R(250, 129, 200, 26, '#4a3524'); R(254, 132, 192, 20, '#24452f');
+  c.fillStyle = 'rgba(255,255,255,.85)'; c.font = '12px Comic Sans MS, Trebuchet MS'; c.textAlign = 'left'; c.fillText('3 × 4 = 12', 262, 147); c.fillText('20 ÷ 5 = 4', 370, 147);
+  R(470, 170, 64, 34, '#6e4a2a'); R(474, 174, 20, 14, '#ecf0f1'); c.fillStyle = '#c0392b'; c.beginPath(); c.arc(520, 182, 5, 0, 6.3); c.fill(); // teacher desk + apple
+  for (let x = 185; x < 440; x += 80) for (let y = 215; y < 390; y += 62) {
+    R(x + 8, y + 26, 28, 12, '#3d566e'); R(x + 10, y + 36, 3, 6, '#333'); R(x + 31, y + 36, 3, 6, '#333'); // chair
+    R(x, y, 44, 26, '#a97c50'); c.strokeStyle = '#6e4a2a'; c.lineWidth = 2; c.strokeRect(x, y, 44, 26);
+    R(x + 8, y + 6, 14, 10, '#fff'); R(x + 26, y + 8, 2, 10, '#f1c40f');
+  }
+  [['#e74c3c', 165], ['#3498db', 190], ['#2ecc71', 505]].forEach(([col, px]) => { R(px, 129, 20, 26, col); }); // posters
+  // lunchroom
+  R(580, 132, 190, 28, '#95a5a6'); R(580, 132, 190, 6, '#bdc3c7');
+  ['#e67e22', '#27ae60', '#f1c40f', '#c0392b', '#ecf0f1', '#8e44ad'].forEach((col, i) => { R(588 + i * 30, 141, 24, 14, '#7f8c8d'); c.fillStyle = col; c.beginPath(); c.arc(600 + i * 30, 148, 5, 0, 6.3); c.fill(); });
+  for (const tx of [610, 780]) for (const ty of [195, 305]) {
+    R(tx, ty - 14, 120, 8, '#5d6d7e'); R(tx, ty + 30, 120, 8, '#5d6d7e'); // benches
+    R(tx, ty, 120, 26, '#d0d3d4'); c.strokeStyle = '#839192'; c.lineWidth = 2; c.strokeRect(tx, ty, 120, 26);
+    for (let i = 0; i < 3; i++) { const trx = tx + 8 + i * 38; R(trx, ty + 4, 28, 18, '#e59866'); c.fillStyle = '#f4d03f'; c.beginPath(); c.moveTo(trx + 4, ty + 8); c.lineTo(trx + 14, ty + 18); c.lineTo(trx + 4, ty + 18); c.fill(); c.fillStyle = '#27ae60'; c.beginPath(); c.arc(trx + 21, ty + 10, 3, 0, 6.3); c.fill(); R(trx + 18, ty + 14, 6, 7, '#fff'); }
+  }
+  for (const [bx, by] of [[905, 360], [905, 390]]) { R(bx, by, 22, 24, '#566573'); R(bx - 1, by, 24, 4, '#2c3e50'); }
+  // gym: bleachers, hoop, ball rack
+  for (let i = 0; i < 4; i++) R(1196 + i * 0, 160 + i * 0, 0, 0, '#000');
+  for (let i = 0; i < 4; i++) { R(1200 + i * 9, 230, 9, 160, i % 2 ? '#7f8c8d' : '#95a5a6'); }
+  R(1080, 128, 40, 6, '#ecf0f1'); c.strokeStyle = '#e67e22'; c.lineWidth = 3; c.beginPath(); c.arc(1100, 142, 9, 0, 6.3); c.stroke();
+  R(970, 360, 50, 14, '#555'); for (let i = 0; i < 4; i++) { c.fillStyle = '#e67e22'; c.beginPath(); c.arc(977 + i * 12, 357, 6, 0, 6.3); c.fill(); c.strokeStyle = '#7a3d0a'; c.lineWidth = 1; c.stroke(); }
+  // library shelves with books
+  for (const sx of [175, 455]) for (let sy = 560; sy < 770; sy += 70) {
+    R(sx, sy, 170, 24, '#5b3a1e');
+    for (let bx = sx + 4; bx < sx + 164;) { const bw = randi(5, 9), bh = randi(14, 20); c.fillStyle = pick(['#c0392b', '#2980b9', '#27ae60', '#f39c12', '#8e44ad', '#16a085', '#d35400', '#ecf0f1']); c.fillRect(bx, sy + 22 - bh, bw, bh); bx += bw + 1; }
+  }
+  R(355, 645, 90, 30, '#8e6e53'); for (const [cx2, cy2] of [[345, 660], [455, 660], [400, 690]]) { c.fillStyle = '#5d4037'; c.beginPath(); c.arc(cx2, cy2, 7, 0, 6.3); c.fill(); }
+  c.fillStyle = '#3498db'; c.beginPath(); c.arc(610, 525, 10, 0, 6.3); c.fill(); c.fillStyle = '#27ae60'; c.fillRect(604, 520, 8, 6); R(608, 535, 4, 8, '#6d4c41');
+  // bathroom: sinks + mirrors, stalls
+  for (const sx of [1022, 1185]) { R(sx, 504, 44, 8, '#aed6f1'); R(sx + 2, 505, 40, 5, '#d6eaf8'); R(sx, 518, 44, 22, '#fdfefe'); c.strokeStyle = '#99a3a4'; c.lineWidth = 2; c.strokeRect(sx, 518, 44, 22); c.fillStyle = '#85c1e9'; c.beginPath(); c.ellipse(sx + 22, 530, 12, 6, 0, 0, 6.3); c.fill(); }
+  for (let sx = 1015; sx < 1240; sx += 76) { R(sx, 690, 70, 84, '#d5dbdb'); R(sx, 690, 70, 6, '#a6acaf'); R(sx + 4, 696, 62, 12, '#b2babb'); c.fillStyle = '#fff'; c.beginPath(); c.ellipse(sx + 35, 745, 12, 15, 0, 0, 6.3); c.fill(); c.strokeStyle = '#aab7b8'; c.stroke(); }
+  // warehouse: barrels, pallets, conveyor frame
+  for (const [bx, by] of [[960, 530], [975, 560], [690, 530]]) { const bg = c.createRadialGradient(bx - 4, by - 4, 2, bx, by, 14); bg.addColorStop(0, '#5dade2'); bg.addColorStop(1, '#1f618d'); c.fillStyle = bg; c.beginPath(); c.arc(bx, by, 13, 0, 6.3); c.fill(); c.strokeStyle = '#154360'; c.lineWidth = 2; c.stroke(); }
+  R(795, 720, 70, 50, '#a9773d'); for (let i = 0; i < 5; i++) R(795, 722 + i * 10, 70, 3, '#7d5426');
+  // ceiling lights (soft pools)
+  for (const k of ROOM_KEYS) { const a = AREAS[k], cx2 = (a.x1 + a.x2) / 2, cy2 = (a.y1 + a.y2) / 2, rr = Math.max(a.x2 - a.x1, a.y2 - a.y1) * .6; const lg = c.createRadialGradient(cx2, cy2, 10, cx2, cy2, rr); lg.addColorStop(0, 'rgba(255,250,220,.16)'); lg.addColorStop(1, 'rgba(0,0,0,.12)'); c.fillStyle = lg; c.fillRect(a.x1, a.y1, a.x2 - a.x1, a.y2 - a.y1); }
+  // walls with a 3D edge
+  WALLS.forEach(w => { if (CRATES.includes(w)) return; R(w.x, w.y + 4, w.w, w.h, 'rgba(0,0,0,.35)'); R(w.x, w.y, w.w, w.h, '#4a5d70'); R(w.x, w.y, w.w, 3, '#6c8299'); });
+  CRATES.forEach(cr => { R(cr.x + 3, cr.y + 5, cr.w, cr.h, 'rgba(0,0,0,.35)'); R(cr.x, cr.y, cr.w, cr.h, '#b07040'); c.strokeStyle = '#5d2e0f'; c.lineWidth = 3; c.strokeRect(cr.x + 1.5, cr.y + 1.5, cr.w - 3, cr.h - 3); c.beginPath(); c.moveTo(cr.x, cr.y); c.lineTo(cr.x + cr.w, cr.y + cr.h); c.moveTo(cr.x + cr.w, cr.y); c.lineTo(cr.x, cr.y + cr.h); c.stroke(); });
+  // room name plates
+  c.font = 'bold 13px Trebuchet MS'; c.textAlign = 'center';
+  for (const k of ROOM_KEYS) { const a = AREAS[k]; const lx = a.door, ly = a.side === 'b' ? a.y2 + 22 : a.y1 - 18; const tw2 = c.measureText(a.name.toUpperCase()).width + 16; c.fillStyle = 'rgba(20,30,50,.85)'; c.beginPath(); c.roundRect(lx - tw2 / 2, ly - 11, tw2, 18, 5); c.fill(); c.fillStyle = '#ffcc33'; c.fillText(a.name.toUpperCase(), lx, ly + 3); }
+  STATIC = oc;
+}
 function drawWorld() {
-  // warehouse surroundings
-  ctx.fillStyle = '#2b2b30'; ctx.fillRect(-400, -400, 2200, 1700);
-  ctx.strokeStyle = '#3a3a42'; ctx.lineWidth = 2;
-  for (let x = -400; x < 1800; x += 60) { ctx.beginPath(); ctx.moveTo(x, -400); ctx.lineTo(x, 1300); ctx.stroke(); }
-  for (let y = -400; y < 1300; y += 60) { ctx.beginPath(); ctx.moveTo(-400, y); ctx.lineTo(1800, y); ctx.stroke(); }
-  // outer conveyor belts
-  [[60, -40, 1300, 50], [60, 830, 1300, 50]].forEach(([x, y, w, h]) => conveyor(x, y, w, h));
-  // big sign
-  ctx.fillStyle = '#c0392b'; ctx.fillRect(520, -10, 360, 50); ctx.fillStyle = '#fff'; ctx.font = 'bold 30px Trebuchet MS'; ctx.textAlign = 'center';
-  ctx.fillText('⚙ CLANKER CO. ⚙', 700, 26);
-  // robot arms silhouettes
-  for (const ax of [40, 1360]) { ctx.strokeStyle = '#555'; ctx.lineWidth = 14; ctx.beginPath(); ctx.moveTo(ax, 700); ctx.lineTo(ax, 450); ctx.lineTo(ax + (ax < 700 ? 60 : -60) + Math.sin(G.t) * 20, 330); ctx.stroke(); }
-  // floors
-  const floorCol = { classroom: '#d9c9a3', lunch: '#cfe3e8', gym: '#d4a373', library: '#b5838d', bath: '#e3eef5', warehouse: '#7f8c8d', hall: '#bfbfbf' };
-  for (const k in AREAS) { const A = AREAS[k]; ctx.fillStyle = floorCol[k]; ctx.fillRect(A.x1, A.y1, A.x2 - A.x1, A.y2 - A.y1); }
-  // checker floor in lunchroom
-  ctx.fillStyle = 'rgba(0,0,0,.06)'; for (let x = 550; x < 950; x += 40) for (let y = 120; y < 420; y += 40) if (((x + y) / 40) % 2 === 0) ctx.fillRect(x, y, 40, 40);
-  // decorations
-  ctx.fillStyle = '#8e6e53'; for (let i = 0; i < 2; i++) ctx.fillRect(610 + i * 170, 190, 120, 26), ctx.fillRect(610 + i * 170, 300, 120, 26); // lunch tables
-  ctx.fillStyle = '#2d572c'; ctx.fillRect(250, 135, 200, 22); // chalkboard
-  ctx.fillStyle = '#8e6e53'; for (let x = 200; x < 520; x += 80) for (let y = 220; y < 380; y += 70) ctx.fillRect(x, y, 44, 26); // desks
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(1100, 270, 45, 0, 6.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(1100, 130); ctx.lineTo(1100, 410); ctx.stroke(); // gym lines
-  ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(1210, 270, 9, 0, 6.3); ctx.fill();
-  ctx.fillStyle = '#6d4c41'; for (let y = 580; y < 760; y += 60) ctx.fillRect(190, y, 150, 18), ctx.fillRect(460, y, 150, 18); // shelves
-  ['#e74c3c', '#3498db', '#f1c40f', '#2ecc71'].forEach((c, i) => { ctx.fillStyle = c; for (let y = 580; y < 760; y += 60) ctx.fillRect(195 + i * 36, y + 2, 10, 14); });
-  ctx.strokeStyle = '#95a5a6'; ctx.lineWidth = 3; for (let x = 1020; x < 1240; x += 70) ctx.strokeRect(x, 690, 60, 80); // stalls
-  ctx.fillStyle = '#fff'; ctx.fillRect(1030, 520, 40, 22); ctx.fillRect(1180, 520, 40, 22); // sinks
-  conveyor(700, 620, 260, 30);
-  // walls
-  ctx.fillStyle = '#34495e'; WALLS.forEach(w => { if (!CRATES.includes(w)) ctx.fillRect(w.x, w.y, w.w, w.h); });
-  CRATES.forEach(c => { ctx.fillStyle = '#a0522d'; ctx.fillRect(c.x, c.y, c.w, c.h); ctx.strokeStyle = '#5d2e0f'; ctx.lineWidth = 3; ctx.strokeRect(c.x, c.y, c.w, c.h); ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x + c.w, c.y + c.h); ctx.stroke(); });
-  // room labels
-  ctx.font = 'bold 16px Trebuchet MS'; ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(0,0,0,.35)';
-  for (const k of ROOM_KEYS) { const A = AREAS[k]; ctx.fillText(A.name.toUpperCase(), (A.x1 + A.x2) / 2, A.y1 + (A.side === 'b' ? 36 : A.y2 - A.y1 - 14)); }
+  if (!STATIC) buildStatic();
+  ctx.drawImage(STATIC, ST.x0, ST.y0, ST.w, ST.h);
+  conveyor(80, -60, 1240, 40); conveyor(80, 850, 1240, 40); conveyor(700, 630, 260, 32);
+  // animated robot arms outside
+  for (const ax of [20, 1380]) {
+    const dir = ax < 700 ? 1 : -1, sw = Math.sin(G.t * 1.3 + ax);
+    ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 16; ctx.lineCap = 'round';
+    const ex = ax + dir * (70 + sw * 25), ey = 360 + Math.cos(G.t * 1.3) * 20;
+    ctx.beginPath(); ctx.moveTo(ax, 720); ctx.lineTo(ax, 480); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.fillStyle = '#555'; ctx.beginPath(); ctx.arc(ax, 480, 12, 0, 6.3); ctx.fill();
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex + dir * 14, ey - 10); ctx.moveTo(ex, ey); ctx.lineTo(ex + dir * 14, ey + 10); ctx.stroke(); ctx.lineCap = 'butt';
+  }
+  // emergency button in the lunchroom
+  const pulse = G.emUses > 0 ? (Math.sin(G.t * 5) + 1) / 2 : 0;
+  ctx.fillStyle = '#7f8c8d'; ctx.beginPath(); ctx.ellipse(EM_BTN.x, EM_BTN.y + 6, 22, 11, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.ellipse(EM_BTN.x, EM_BTN.y + 2, 20, 10, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = G.emUses > 0 ? `rgb(${200 + pulse * 55},${30 + pulse * 30},30)` : '#7b241c';
+  ctx.beginPath(); ctx.ellipse(EM_BTN.x, EM_BTN.y - 2, 13, 7, 0, 0, 6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.ellipse(EM_BTN.x - 4, EM_BTN.y - 4, 4, 2, 0, 0, 6.3); ctx.fill();
   // notebooks
+  ctx.textAlign = 'center';
   G.notebooks.forEach(n => {
-    if (n.done) { ctx.globalAlpha = .45; ctx.fillStyle = '#2ecc71'; ctx.fillRect(n.x - 10, n.y - 13, 20, 26); ctx.fillStyle = '#fff'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('✓', n.x, n.y + 6); ctx.globalAlpha = 1; return; }
-    const pulse = 1 + Math.sin(G.t * 4 + n.x) * .08;
-    ctx.save(); ctx.translate(n.x, n.y); ctx.scale(pulse, pulse);
-    ctx.fillStyle = 'rgba(255,230,80,.35)'; ctx.beginPath(); ctx.arc(0, 0, 20, 0, 6.3); ctx.fill();
-    ctx.fillStyle = '#f39c12'; ctx.fillRect(-10, -13, 20, 26); ctx.fillStyle = '#fff'; ctx.fillRect(-6, -9, 12, 3); ctx.fillRect(-6, -3, 12, 3); ctx.fillRect(-6, 3, 9, 3);
+    if (n.done) { ctx.globalAlpha = .5; ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.roundRect(n.x - 10, n.y - 13, 20, 26, 3); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = 'bold 15px sans-serif'; ctx.fillText('✓', n.x, n.y + 5); ctx.globalAlpha = 1; return; }
+    const pulse2 = 1 + Math.sin(G.t * 4 + n.x) * .08;
+    ctx.save(); ctx.translate(n.x, n.y); ctx.scale(pulse2, pulse2);
+    const gl = ctx.createRadialGradient(0, 0, 4, 0, 0, 24); gl.addColorStop(0, 'rgba(255,230,80,.55)'); gl.addColorStop(1, 'rgba(255,230,80,0)');
+    ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 24, 0, 6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-8, -10, 20, 26);
+    ctx.fillStyle = '#d35400'; ctx.beginPath(); ctx.roundRect(-10, -13, 20, 26, 2); ctx.fill();
+    ctx.fillStyle = '#fdfefe'; ctx.fillRect(-6, -10, 14, 20); ctx.fillStyle = '#5dade2'; for (let i = -6; i < 9; i += 4) ctx.fillRect(-5, i, 12, 1);
+    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 8px sans-serif'; ctx.fillText('+×', 1, 2);
+    ctx.fillStyle = '#7f8c8d'; for (let i = -10; i < 12; i += 4) ctx.fillRect(-11, i, 3, 2);
     ctx.restore();
   });
 }
@@ -698,7 +937,8 @@ function conveyor(x, y, w, h) {
   ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 3; const off = (G.t * 40) % 30;
   for (let i = x - 30 + off; i < x + w; i += 30) { if (i > x) { ctx.beginPath(); ctx.moveTo(i, y + 3); ctx.lineTo(i - 8, y + h - 3); ctx.stroke(); } }
   // robot parts riding along
-  ctx.fillStyle = '#95a5a6'; for (let i = 0; i < w; i += 90) { const px = x + ((i + G.t * 40) % w); ctx.fillRect(px, y + h / 2 - 7, 14, 14); }
+  ctx.fillStyle = '#555'; ctx.fillRect(x, y - 3, w, 3); ctx.fillRect(x, y + h, w, 3);
+  for (let i = 0; i < w; i += 90) { const px = x + ((i + G.t * 40) % (w - 16)); ctx.fillStyle = '#bdc3c7'; ctx.fillRect(px, y + h / 2 - 8, 16, 16); ctx.fillStyle = '#e74c3c'; ctx.fillRect(px + 3, y + h / 2 - 4, 4, 3); ctx.fillRect(px + 9, y + h / 2 - 4, 4, 3); }
 }
 function render() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -803,8 +1043,10 @@ function loop(now) {
       }
       $('useBtn').style.display = nearNotebook() ? 'block' : 'none';
       $('reportBtn').style.display = nearStatue() ? 'block' : 'none';
+      G.emCool -= dt;
+      $('emBtn').style.display = nearEmButton() ? 'block' : 'none';
       if (G.player.moving || Math.random() < .05) $('roomName').textContent = areaAt(G.player.x, G.player.y).name + (G.player.state !== 'alive' ? ' 👻' : '');
-    } else { $('useBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; }
+    } else { $('useBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; $('emBtn').style.display = 'none'; }
     G.fx.forEach(f => f.t -= dt); G.fx = G.fx.filter(f => f.t > 0);
     G.parts.forEach(q => { q.t -= dt; if (q.sx === undefined) { q.x += q.vx * dt; q.y += q.vy * dt; } }); G.parts = G.parts.filter(q => q.t > 0);
   }
@@ -820,7 +1062,8 @@ window.addEventListener('keydown', e => {
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
   if (G.paused) return;
   if (k === 'e' || k === ' ') { const n = nearNotebook(); if (n) openNotebook(n); }
-  if (k === 'r') { const s = nearStatue(); if (s) startMeeting(G.player, s); }
+  if (k === 'm') setMusic(MUSIC.idx + 1);
+  if (k === 'r') { const s = nearStatue(); if (s) startMeeting(G.player, s); else pressEmergency(); }
   if (k.startsWith('Arrow') || k === ' ') e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
@@ -829,8 +1072,11 @@ window.addEventListener('pointermove', e => { if (joy && joy.active && e.pointer
 window.addEventListener('pointerup', e => { if (joy && e.pointerId === joy.id) joy.active = false; });
 window.addEventListener('pointercancel', () => { if (joy) joy.active = false; });
 $('useBtn').onclick = () => { const n = nearNotebook(); if (n && !G.paused) openNotebook(n); };
+$('emBtn').onclick = pressEmergency;
 $('reportBtn').onclick = () => { const s = nearStatue(); if (s && !G.paused) startMeeting(G.player, s); };
-$('playBtn').onclick = () => { audio(); SFX.ding(); $('startScreen').style.display = 'none'; newGame(); };
+$('musicBtn').onclick = () => setMusic(MUSIC.idx + 1);
+$('musicSel').onchange = () => setMusic(MUSIC.styles.indexOf($('musicSel').value));
+$('playBtn').onclick = () => { audio(); SFX.ding(); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); };
 $('againBtn').onclick = () => { $('endScreen').style.display = 'none'; newGame(); };
 window.__game = () => G; window.__dbg = { freeze, startMeeting, playerVote }; // for testing
 })();
