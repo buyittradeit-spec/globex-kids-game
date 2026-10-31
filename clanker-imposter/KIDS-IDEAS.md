@@ -66,5 +66,18 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 8 kids (added Pink and Teal)
 - 👥 2 Players split screen on one computer (pick it before PLAY)
 
+## Added in v0.5
+- Realistic 3D kids & teachers (arms/legs walk, faces, hair, shadows), ice-statue kids, door frames
+- 🧑‍🏫 Teachers Mr. Gears & Ms. Bolt patrol the hallways and ask for a hall pass
+- 🎫 Hall passes at the Principal's Office (90 s). Caught without one = no notebooks until you get one; caught again = walked to the office
+- 🔧 Clanker sabotages (school versions of every Among Us sabotage):
+  - 💡 Lights Out (Lights): fuse box, East Hallway
+  - 📡 Intercom Jam (Comms): server, Computer Lab; hides notebook count + mini-map
+  - 🔥 Boiler Meltdown (Reactor / Seismic): 45 s, hold both valves at once on the Warehouse Floor
+  - 🌫️ Air Filter Clog (O2 / Crash Course): 50 s, type codes in the Library + Principal's Office
+  - 🚪 Door Lock (Doors): locks a room for 12 s
+  - 🎭 Costume Chaos (Mushroom Mixup): everyone looks the same for 20 s
+- No meetings during a sabotage; computer kids come help fix
+
 ## Still to decide
 - Quick-chat phrases
