@@ -256,7 +256,7 @@ const MUSIC = { styles: ['Country', 'Rock', 'Chill', 'Arcade', 'Off'], idx: 0, g
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 const CH = { maj: [0, 4, 7], min: [0, 3, 7], maj7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
 const SONGS = {
-  Country: { bpm: 112, prog: [[43, 'maj'], [48, 'maj'], [50, 'maj'], [43, 'maj'], [48, 'maj'], [43, 'maj'], [50, 'maj'], [43, 'maj']], scale: [0, 2, 4, 7, 9], melOct: 31, density: .45 },
+  Country: { bpm: 72, prog: [[40, 'min'], [40, 'min'], [36, 'maj'], [38, 'maj'], [40, 'min'], [43, 'maj'], [38, 'maj'], [40, 'min']], scale: [0, 3, 5, 7, 10], melOct: 28, density: .3 },
   Rock:    { bpm: 132, prog: [[40, 'min'], [36, 'maj'], [38, 'maj'], [45, 'min']], scale: [0, 3, 5, 7, 10], melOct: 36, density: .35 },
   Chill:   { bpm: 78,  prog: [[53, 'maj7'], [52, 'm7'], [50, 'm7'], [48, 'maj7']], scale: [0, 2, 4, 7, 9], melOct: 19, density: .22 },
   Arcade:  { bpm: 140, prog: [[48, 'maj'], [45, 'min'], [41, 'maj'], [43, 'maj']], scale: [0, 2, 4, 7, 9], melOct: 24, density: .5 },
@@ -272,6 +272,23 @@ function genMelody(song) {
     out.push(bar);
   }
   return out;
+}
+// heavy, crunchy guitar for the country anthem
+function distCurve() { if (MUSIC.curve) return MUSIC.curve; const n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / n * 2 - 1; c[i] = Math.tanh(x * 4); } return MUSIC.curve = c; }
+function mGuitar(freqs, t, dur, vol) {
+  const a = ac, ws = a.createWaveShaper(), f = a.createBiquadFilter(), g = a.createGain();
+  ws.curve = distCurve(); f.type = 'lowpass'; f.frequency.value = 1800;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .02); g.gain.setValueAtTime(vol, t + dur * .7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  freqs.forEach(fr => { const o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = fr; o.detune.value = rand(-8, 8); o.connect(ws); o.start(t); o.stop(t + dur + .05); });
+  ws.connect(f); f.connect(g); g.connect(MUSIC.gain);
+}
+function mSlide(freq, t, dur, vol) { // slide guitar: glides up into the note
+  const a = ac, o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(), v = a.createOscillator(), vg = a.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(freq * .89, t); o.frequency.exponentialRampToValueAtTime(freq, t + .12);
+  v.frequency.value = 5.5; vg.gain.value = freq * .012; v.connect(vg); vg.connect(o.frequency);
+  f.type = 'lowpass'; f.frequency.value = 2200; f.Q.value = 3;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .05); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f); f.connect(g); g.connect(MUSIC.gain); o.start(t); o.stop(t + dur + .05); v.start(t); v.stop(t + dur + .05);
 }
 function mOsc(type, freq, t, dur, vol, glide, filt) {
   const a = ac, o = a.createOscillator(), g = a.createGain(); let node = o;
@@ -297,11 +314,15 @@ function playStep(name, step, t) {
   const [root, q] = S.prog[bar], tones = CH[q], sixteenth = 60 / S.bpm / 4;
   const melNote = MUSIC.mel[name][bar][i];
   const melFreq = melNote == null ? 0 : mtof(S.melOct + 36 + S.scale[melNote % 5] + 12 * Math.floor(melNote / 5));
-  if (name === 'Country') {
-    if (i === 0 || i === 8) { mOsc('triangle', mtof(root + (i === 8 ? 7 : 0)), t, .35, .32); kick(t, .35); }
-    if (i === 4 || i === 12) { tones.forEach((n, k) => mOsc('triangle', mtof(root + 24 + n), t + k * .012, .12, .07)); mNoise(t, .09, .12, 3000); }
-    if (i % 4 === 2) hat(t, .05);
-    if (melFreq) mOsc('sawtooth', melFreq, t, sixteenth * 2.2, .06, 0.94, 2600); // twangy pluck
+  if (name === 'Country') { // slow, heavy, stomping country anthem
+    if (i === 0) { mOsc('sine', mtof(root - 12), t, sixteenth * 15, .32); mGuitar([mtof(root + 12), mtof(root + 19), mtof(root + 24)], t, sixteenth * 7.5, .055); }
+    if (i === 8) mGuitar([mtof(root + 12), mtof(root + 19)], t, sixteenth * 7.5, .045);
+    if (i === 14 && bar % 2 === 1) mGuitar([mtof(root + 10), mtof(root + 17)], t, sixteenth * 2, .04);
+    if (i === 0 || i === 6) kick(t, .7);                       // big boot stomp
+    if (i === 8) { snare(t, .38); mNoise(t, .25, .25, 900, 'lowpass'); } // heavy backbeat + hand clap
+    if (i % 4 === 2) hat(t, .03);
+    if (i === 4 || i === 12) mNoise(t, .06, .06, 4500);        // shaker
+    if (melFreq && bar % 4 >= 2) mSlide(melFreq, t, sixteenth * 3.5, .05); // slide guitar answers every other line
   } else if (name === 'Rock') {
     if (i % 2 === 0) { mOsc('sawtooth', mtof(root + 12), t, sixteenth * 1.6, .07, 0, 1400); mOsc('sawtooth', mtof(root + 19), t, sixteenth * 1.6, .05, 0, 1400); mOsc('square', mtof(root), t, sixteenth * 1.8, .1, 0, 600); }
     if (i === 0 || i === 6 || i === 8) kick(t, .55);
@@ -2352,14 +2373,14 @@ function endQuiz(win) {
 // ================= SING-ALONG LYRICS (original, written for Clanker Imposter) =================
 const LYRICS = {
   Country: [
-    "Well I walked into the lunchroom with my tray of mac and cheese 🎵",
-    "Saw a kid chew on his milk carton, now who'd do that, if you please? 🎵",
-    "His footsteps went clank-clank, and his eyes were blinkin' red 🎵",
-    "There's a Clanker in the cafeteria, that's what my grandpa said! 🎵",
-    "So grab your math notebook, partner, solve it nice and true 🎵",
-    "'Cause if you get it wrong, that robot's comin' after you! 🎵",
-    "Yee-haw, a hall pass in my pocket and my boots upon my feet 🎵",
-    "We're gonna vote that Clanker out before the final bell can beat! 🎵",
+    "Red dirt on my sneakers and thunder in the hall 🎵",
+    "Lockers rattlin' like a storm about to fall 🎵",
+    "There's a Clanker in the shadows, but I'm standin' my ground 🎵",
+    "Got my notebook in my backpack and my boots planted down 🎵",
+    "These halls are my hometown, I learned to read on these floors 🎵",
+    "Ain't no rusty robot gonna run me out these doors 🎵",
+    "That bell rings out like Sunday mornin', loud across the land 🎵",
+    "We stand up for each other, and together we will stand 🎵",
   ],
   Rock: [
     "Lockers slam, the lights go out! 🎸",
