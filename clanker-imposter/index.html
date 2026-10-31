@@ -2156,6 +2156,8 @@ function updateItems(dt) {
   });
   // ----- Big Brock -----
   const b = G.bully; b.sayT -= dt; b.cd -= dt;
+  // every 20 seconds Big Brock pops up somewhere else in the downstairs hallways
+  if (b.detT <= 0 && b.stopT <= 0) { b.tpT = (b.tpT ?? 20) - dt; if (b.tpT <= 0) { b.tpT = 20; for (let i = 0; i < 20; i++) { const q = randPointIn(AREAS[pick(BULLY_ZONES)]); if (G.humans.every(h => dist(h, q) > 140)) { b.x = q.x; b.y = q.y; b.path = []; b.wait = .5; b.lured = 0; break; } } } }
   if (b.detT > 0) { b.detT -= dt; b.x = BULLY_DET.x; b.y = BULLY_DET.y; if (b.detT <= 0) { b.x = 1300; b.y = 460; b.path = []; toast('😠 Big Brock is out of detention...'); } return; }
   if (b.stopT > 0) { b.stopT -= dt; return; }
   if (b.lured > 0) { b.lured -= dt; if (b.path.length) { followPath(b, dt, 95); return; } }
