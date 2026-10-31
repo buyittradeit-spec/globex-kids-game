@@ -95,7 +95,10 @@
 <!-- NOTEBOOK -->
 <div class="overlay" id="nbScreen">
   <div class="panel" style="max-width:360px">
-    <h2>📓 Math Notebook</h2>
+    <div style="background:linear-gradient(135deg,#d35400,#e67e22);border-radius:12px;padding:8px 10px;margin:-6px -6px 10px;border:3px dashed rgba(255,255,255,.6)">
+      <div style="font-size:22px;font-weight:800;letter-spacing:1px;text-shadow:2px 2px 0 rgba(0,0,0,.35)">🌎 GLOBEX KIDS</div>
+      <div style="font-size:15px;font-weight:700;opacity:.95">📓 Math Notebook</div>
+    </div>
     <div id="problem">7 + 5 = ?</div>
     <div id="answer"></div>
     <div class="pad" id="pad"></div>
@@ -927,7 +930,7 @@ function drawWorld() {
     ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fillRect(-8, -10, 20, 26);
     ctx.fillStyle = '#d35400'; ctx.beginPath(); ctx.roundRect(-10, -13, 20, 26, 2); ctx.fill();
     ctx.fillStyle = '#fdfefe'; ctx.fillRect(-6, -10, 14, 20); ctx.fillStyle = '#5dade2'; for (let i = -6; i < 9; i += 4) ctx.fillRect(-5, i, 12, 1);
-    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 8px sans-serif'; ctx.fillText('+×', 1, 2);
+    ctx.fillStyle = '#d35400'; ctx.font = 'bold 7px sans-serif'; ctx.fillText('GK', 1, -2); ctx.fillStyle = '#2c3e50'; ctx.fillText('+×', 1, 7);
     ctx.fillStyle = '#7f8c8d'; for (let i = -10; i < 12; i += 4) ctx.fillRect(-11, i, 3, 2);
     ctx.restore();
   });
