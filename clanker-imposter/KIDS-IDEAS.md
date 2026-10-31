@@ -85,5 +85,12 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - Teachers and the Principal are witnesses: the Clanker won't freeze kids in front of them
 - More realistic: real-time wall clocks, windows, EXIT signs, fire extinguishers, water fountains, bulletin board, gym trophy case, plants, footsteps, teacher heel clicks, class-change bell, kids turn to look at you
 
+## Added in v0.7
+- 🪜 Real stairs at the east end of the main hallway up to a 2nd floor
+- 2nd floor with BIGGER rooms: Spelling, Geography, Robotics Lab, Band Room, Language Arts, Auditorium (stage + seats), Nurse's Office, Teachers' Lounge
+- 20 kids (backpacks, different heights) · 30 notebooks on both floors
+- Detention 20 s, then 40, 60… (+20 each time)
+- Open classroom doors, mini-map shows 1F / 2F, faster 3D drawing
+
 ## Still to decide
 - Quick-chat phrases
