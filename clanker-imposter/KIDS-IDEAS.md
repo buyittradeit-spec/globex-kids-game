@@ -61,5 +61,10 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - Globex Kids 2027 calendar on the teacher's desk
 - Copy Room door at the west end of the hallway (small buyitprintables plate)
 
+## Added in v0.4
+- Bigger school (about 2× wider and taller): 2 hallways + East Hallway, new rooms: Science, History, Art, Music, Reading, Computer Lab, Kindergarten, Copy Room (calendar on the copier), Principal's Office
+- 8 kids (added Pink and Teal)
+- 👥 2 Players split screen on one computer (pick it before PLAY)
+
 ## Still to decide
 - Quick-chat phrases

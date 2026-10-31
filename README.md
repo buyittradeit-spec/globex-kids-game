@@ -6,7 +6,7 @@ Browser games for Globex Kids, built together with the kids who play them.
 
 | Folder | Game | Status |
 |---|---|---|
-| `clanker-imposter/` | Clanker Imposter: find the disguised robot, solve math notebooks, report frozen kids, vote it out | Designing with the kids |
+| `clanker-imposter/` | Clanker Imposter: find the disguised robot, solve math notebooks, report frozen kids, vote it out. 3D + map view, 1–2 players split screen | Playable demo v0.4 |
 
 ## Ground rules for every game here
 
