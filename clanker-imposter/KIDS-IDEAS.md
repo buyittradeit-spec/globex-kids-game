@@ -54,5 +54,12 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - 🔴 Emergency meeting button in the Lunchroom (1 use per game)
 - 🎵 Music: Country, Rock, Chill, Arcade (all original, made in code, no copyright)
 
+## Added in v0.3
+- 📷 First-person 3D view (switch to map view with 🗺️ or V), mini-map, phone thumb controls
+- Globex Kids posters around the school, owl/dragon/fox mural in the Lunchroom
+- Teacher of the Year portrait at the end of the hallway 🐸
+- Globex Kids 2027 calendar on the teacher's desk
+- Copy Room door at the west end of the hallway (small buyitprintables plate)
+
 ## Still to decide
 - Quick-chat phrases
