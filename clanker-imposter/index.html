@@ -72,6 +72,8 @@
 </div>
 <div id="sabBanner" style="position:fixed;top:96px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;z-index:3;padding:8px 18px;border-radius:14px;border:3px solid #fff;font-size:17px;text-align:center;max-width:94%;animation:flash .6s infinite alternate"></div>
 <div id="toasts"></div>
+<div id="watchBadge" style="position:fixed;right:10px;bottom:10px;display:none;pointer-events:none;z-index:3;background:rgba(80,30,110,.85);border:3px solid #fff;color:#fff;font-weight:800;font-size:16px;padding:6px 14px;border-radius:14px"></div>
+<div id="watchCap" style="position:fixed;bottom:120px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;z-index:3;background:rgba(0,0,0,.7);border:3px solid #ffcc33;color:#fff;font-weight:800;font-size:22px;padding:8px 18px;border-radius:14px;text-align:center;white-space:nowrap"></div>
 <div id="lyric" style="position:fixed;bottom:76px;left:50%;transform:translateX(-50%);display:none;pointer-events:none;background:rgba(0,0,0,.55);color:#ffeaa7;font-weight:700;font-size:16px;padding:6px 14px;border-radius:12px;max-width:90%;text-align:center;font-style:italic"></div>
 <div id="divider" style="position:fixed;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;background:#ffcc33;display:none;pointer-events:none;z-index:2"></div>
 <div id="inv0" class="inv" style="left:12px"></div>
@@ -152,8 +154,10 @@
       <label style="font-weight:700"><input type="checkbox" class="muteChk"> 🔇 Mute</label>
     </div>
     <button class="btn" id="playBtn">▶ PLAY</button>
+    <button class="btn" id="watchBtn" style="background:#8e44ad">📺 WATCH MODE</button>
+    <div style="font-size:14px;opacity:.85;margin:-2px 0 6px">Watch mode plays by itself, round after round. Great for streams! (Add <b>?watch</b> to the link to start it automatically.)</div>
     <button class="btn gray" id="aboutBtn" style="font-size:15px;padding:6px 14px">ℹ️ About &amp; Privacy</button>
-    <div class="credit">Version 1.3 · Globex Kids · All art, music and lyrics are original</div>
+    <div class="credit">Version 1.4 · Globex Kids · All art, music and lyrics are original</div>
   </div>
 </div>
 
@@ -260,6 +264,7 @@
     <h1 id="endTitle">🏆 KIDS WIN!</h1>
     <div id="endSub" style="font-size:20px;margin:10px 0"></div>
     <button class="btn" id="againBtn">🔁 Play again</button>
+    <div id="endNext" style="font-size:18px;font-weight:800;margin-top:8px;color:#ffcc33"></div>
   </div>
 </div>
 
@@ -631,6 +636,7 @@ const KID_DEFS = [
   { name: 'Maya', color: '#4a235a', hair: '#3e2723', skin: '#c68642', style: 2, pants: '#34495e', blink: .9 },
 ];
 let G = null;
+let WATCH = null; // watch mode: { round, kids, clank, timer }
 const keys = {};
 let joy = null;
 
@@ -646,7 +652,7 @@ function newGame() {
     state: 'alive', path: [], wait: 0, task: null, solveT: 0, disguise: null, disguiseT: 0,
     saw: null, didNotebook: null, lastPos: { x: 0, y: 0 }, stuckT: 0, face: 1, bob: rand(0, 6),
   }));
-  const twoP = $('playersSel').value === '2';
+  const twoP = !WATCH && $('playersSel').value === '2';
   if (twoP) kids[1].isPlayer = true;
   const humans = kids.filter(k => k.isPlayer); humans.forEach((h, i) => { h.pi = i; h.emUses = 1; h.yaw = Math.PI / 2; });
   const nClank = Math.min(+$('clankSel').value || 1, Math.max(1, Math.floor(nKids / 5)));
@@ -664,10 +670,11 @@ function newGame() {
       notebooks.push({ x: p.x, y: p.y, done: false, area: k });
     }
   });
-  G = { diff, twoP, humans, emCool: 12, kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
+  G = { watch: !!WATCH, diff, twoP, humans, emCool: 12, kids, player: kids[0], clanker, notebooks, statues: [], fx: [], parts: [], t: 0, paused: false, over: false, ops, eject: null, nbOpen: null, meeting: null, trusted: new Set() };
   initExtras(); initItems(); initNerd();
   teleportToLunch();
   updateHud();
+  if (WATCH) { humans.forEach(h => h.auto = { mode: null }); watchHud(); setTimeout(() => toast(`📺 Round ${WATCH.round}: ${humans[0].name} is on autopilot. Who is the Clanker? 🤖`), 800); return; }
   setTimeout(() => toast(twoP ? '🔴 The emergency button is in the Lunchroom. Each player can press it once!' : '🔴 The emergency button is in the Lunchroom. You can press it once!'), 800);
 }
 function teleportToLunch() {
@@ -709,8 +716,8 @@ function passHud() {
 }
 function roomHud() { $('roomName').textContent = G.humans.map(h => (G.twoP ? ptag(h) + ': ' : '') + (isF2(h.y) ? '2F ' : '1F ') + areaAt(h.x, h.y).name + (h.state !== 'alive' ? ' 👻' : '')).join('  ·  '); }
 
-const pname = h => G.twoP ? `Player ${h.pi + 1}` : 'You';
-const ptag = h => G.twoP ? `P${h.pi + 1}` : 'YOU';
+const pname = h => G.watch ? h.name : G.twoP ? `Player ${h.pi + 1}` : 'You';
+const ptag = h => G.watch ? h.name.toUpperCase() : G.twoP ? `P${h.pi + 1}` : 'YOU';
 let VIEWER = null;
 // ================= VISIBILITY =================
 function seenBy(e) { return G.humans.find(h => h.state === 'alive' && canSee(e, h)); }
@@ -838,7 +845,7 @@ function puff(k) {
 }
 
 // ================= PLAYER =================
-function playerMove(dt) { G.humans.forEach(h => moveHuman(h, dt)); }
+function playerMove(dt) { G.humans.forEach(h => G.watch ? autoHuman(h, dt) : moveHuman(h, dt)); }
 function readCtl(h) { return padCtl(h, readKeys(h)); }
 function readKeys(h) {
   const K = n => !!keys[n], c = { fwd: 0, str: 0, turn: 0, ax: 0, ay: 0 };
@@ -988,7 +995,7 @@ function renderCards(showVotes) {
     const alive = k.state === 'alive';
     d.className = 'card' + (alive ? '' : ' dead') + (G.meeting && !G.twoP && G.meeting.playerVote === k.name ? ' picked' : '');
     const v = showVotes ? (G.meeting.tally[k.name] || 0) : 0;
-    d.innerHTML = `<span class="dot" style="background:${k.color}"></span><span>${k.isPlayer ? k.name + (G.twoP ? ` (P${k.pi + 1})` : ' (You)') : k.name}${alive ? '' : ' 🧊'}</span><span class="votes">${showVotes && v ? '🗳️'.repeat(v) : ''}</span>`;
+    d.innerHTML = `<span class="dot" style="background:${k.color}"></span><span>${k.isPlayer ? k.name + (G.watch ? ' (autopilot)' : G.twoP ? ` (P${k.pi + 1})` : ' (You)') : k.name}${alive ? '' : ' 🧊'}</span><span class="votes">${showVotes && v ? '🗳️'.repeat(v) : ''}</span>`;
     if (alive) d.onclick = () => playerVote(k.name);
     list.appendChild(d);
   });
@@ -1001,6 +1008,7 @@ function startVoting() {
 }
 function askVoter() {
   const m = G.meeting, v = m.voters[m.vi];
+  if (G.watch) { $('skipBtn').style.display = 'none'; renderCards(); $('mtgInfo').textContent = `🗳️ ${v.name} is thinking... 🤔`; m.timer = setTimeout(() => playerVote(autoVote(v, m)), rand(2200, 3200)); return; }
   const who = G.twoP ? `${v.pi === 0 ? '🟦' : '🟥'} Player ${v.pi + 1}: ` : '';
   $('skipBtn').style.display = 'inline-block'; renderCards();
   let left = 20; $('mtgInfo').textContent = `🗳️ ${who}tap who you think is the Clanker! (${left})`;
@@ -1014,7 +1022,7 @@ function playerVote(name) {
   m.vi++;
   if (m.vi < m.voters.length) { $('mtgInfo').textContent = G.twoP ? 'Got it! 🤫 Next player...' : ''; setTimeout(askVoter, 700); return; }
   m.phase = 'counting'; $('skipBtn').style.display = 'none';
-  $('mtgInfo').textContent = G.twoP ? 'Both players voted. Counting votes...' : (name === 'skip' ? 'You skipped. Counting votes...' : `You voted for ${name}. Counting votes...`);
+  $('mtgInfo').textContent = G.watch ? (name === 'skip' ? `${voter.name} skipped. Counting votes...` : `${voter.name} voted for ${name}. Counting votes...`) : G.twoP ? 'Both players voted. Counting votes...' : (name === 'skip' ? 'You skipped. Counting votes...' : `You voted for ${name}. Counting votes...`);
   renderCards(); setTimeout(finishVoting, 1200);
 }
 function finishVoting() {
@@ -1075,6 +1083,18 @@ function endGame(kidsWin, msg) {
   $('endSub').innerHTML = msg;
   setTimeout(() => $('endScreen').style.display = 'flex', 400);
   kidsWin ? SFX.ding() : SFX.clank(1);
+  $('endNext').textContent = '';
+  if (G.watch && WATCH) {
+    kidsWin ? WATCH.kids++ : WATCH.clank++; watchHud(); $('watchCap').style.display = 'none';
+    const g = G; let left = 12; clearInterval(WATCH.timer);
+    $('endNext').textContent = `📺 Next round in ${left}...`;
+    const tid = WATCH.timer = setInterval(() => {
+      if (!WATCH || G !== g) { clearInterval(tid); return; }
+      if (G.menu) return;
+      left--; $('endNext').textContent = `📺 Next round in ${left}...`;
+      if (left <= 0) { clearInterval(WATCH.timer); WATCH.round++; restartGame(); }
+    }, 1000);
+  }
 }
 
 // ================= DRAWING =================
@@ -2594,6 +2614,114 @@ function pollPads(dt) {
 window.addEventListener('gamepadconnected', e => { try { toast(`🎮 Controller ${e.gamepad.index + 1} connected! Left stick = walk, right stick = look, A = solve, B = report, X/Y/RB = items`); } catch (er) {} });
 function humanAct(h, what) { if (!h) return; if (what === 'solve') { const sp = nearSpot(h); if (sp) return useSpot(h, sp); const rt = nearReportTeacher(h); if (rt) return bullyToDetention(rt); if (nearPrincipal(h)) return getPass(h); const n = nearNotebook(h); if (n) openNotebook(n, h); } else { const st = nearStatue(h); if (st) startMeeting(h, st); else pressEmergency(h); } }
 
+// ================= WATCH MODE (autopilot) =================
+function watchHud() {
+  if (!WATCH) return;
+  const el = $('watchBadge'); el.style.display = 'block';
+  el.textContent = `📺 WATCH MODE · Round ${WATCH.round} · 🧒 Kids ${WATCH.kids} – 🤖 Clankers ${WATCH.clank}`;
+}
+function watchSay(txt, secs = 2.5) {
+  const el = $('watchCap'); el.textContent = txt; el.style.display = 'block';
+  clearTimeout(watchSay.t); watchSay.t = setTimeout(() => el.style.display = 'none', secs * 1000);
+}
+function autoGo(h, mode, to) { h.auto.mode = mode; h.path = planPath(h, to); }
+function autoHuman(h, dt) {
+  const A = h.auto || (h.auto = { mode: null });
+  h.moving = false;
+  if (h.stopT > 0) { h.stopT -= dt; return; }
+  if (h.detT > 0) { A.mode = null; h.path = []; return; }
+  if (h.solveT > 0) { h.solveT -= dt; if (h.solveT <= 0) autoSolve(h); return; }
+  if (h.wait > 0) { h.wait -= dt; return; }
+  const alive = h.state === 'alive';
+  // 1) found a frozen kid? report it
+  if (alive) { const st = nearStatue(h); if (st && !critical()) { watchSay(`🚨 ${h.name} found ${st.name} frozen!`); startMeeting(h, st); return; } }
+  // 2) a teacher wants a hall pass: hurry to the Principal
+  if (alive && (h.needPass || h.passClock > 0)) {
+    if (nearPrincipal(h)) { getPass(h); h.path = []; A.mode = null; h.wait = .6; return; }
+    if (A.mode !== 'pass' || !h.path.length) { autoGo(h, 'pass', PASS_DESK); watchSay(`🎫 ${h.name} runs to get a hall pass!`); }
+  }
+  // 3) a Clanker is hunting us: run to a far-away room
+  else if (alive && hunterOf(h)) {
+    const c = hunterOf(h);
+    if (A.mode !== 'flee' || !h.path.length) {
+      const far = shuffle(ROOM_KEYS.slice()).slice(0, 5).map(k => randPointIn(AREAS[k])).sort((a, b) => dist(b, c) - dist(a, c))[0];
+      autoGo(h, 'flee', far); if (A.mode === 'flee' && !A.fleeSaid) { A.fleeSaid = true; watchSay(`😱 ${h.name} is running from the Clanker!`); }
+    }
+  }
+  // 4) help fix a sabotage (lights, intercom, boiler)
+  else if (alive && G.sab && ['lights', 'comms', 'boiler'].includes(G.sab.type)) {
+    const spots = SAB_INFO[G.sab.type].spots.filter(sp => !G.sab.done[sp]);
+    const free = spots.filter(sp => !G.kids.some(k => k !== h && k.fixSpot === sp && k.state === 'alive'));
+    const sp = (free.length ? free : spots).sort((a, b) => dist(h, SPOTS[a]) - dist(h, SPOTS[b]))[0];
+    if (sp) {
+      if (dist(h, SPOTS[sp]) < 40) { if (h.fixing !== sp) { h.fixing = sp; watchSay(`🔧 ${h.name} is fixing the ${SPOTS[sp].label || 'sabotage'}!`); } h.path = []; return; }
+      if (A.mode !== 'fix' || !h.path.length) autoGo(h, 'fix', SPOTS[sp]);
+    }
+  }
+  else {
+    A.fleeSaid = false;
+    if (A.mode === 'pass' || A.mode === 'flee' || A.mode === 'fix') { A.mode = null; h.path = []; }
+    if (A.mode === 'nb' && (!h.task || h.task.done)) { A.mode = null; h.path = []; h.task = null; }
+    // 5) go solve the nearest open notebook (with a little randomness)
+    if (!h.path.length) {
+      const open = G.notebooks.filter(n => !n.done).sort((a, b) => dist(a, h) - dist(b, h));
+      if (open.length) { h.task = open[Math.random() < .7 ? 0 : Math.min(open.length - 1, randi(1, 3))]; autoGo(h, 'nb', h.task); }
+      else { h.task = null; autoGo(h, 'wander', randPointIn(AREAS[pick(ROOM_KEYS)])); }
+    }
+  }
+  const ox = h.x, oy = h.y, gs = h.state;
+  h.state = 'alive'; // ghosts on autopilot still walk the halls, so the camera never goes inside walls
+  followPath(h, dt, (VIEW === '3d' && R3 ? 140 : 145) * (alive ? 1 : 1.12) * (h.speedT > 0 ? 1.6 : 1), () => {
+    if (A.mode === 'nb' && h.task && !h.task.done && !(alive && h.needPass)) {
+      A.prob = makeProblem(); h.solveT = rand(1.8, 2.8);
+      watchSay(`📓 ${h.name} is solving: ${A.prob.text}`, 3);
+    } else h.wait = rand(.3, 1);
+    if (A.mode !== 'fix') A.mode = null;
+  });
+  h.state = gs;
+  const mx = h.x - ox, my = h.y - oy;
+  if (Math.hypot(mx, my) > .2) {
+    h.moving = true;
+    let d = Math.atan2(my, mx) - h.yaw; d = Math.atan2(Math.sin(d), Math.cos(d));
+    h.yaw += d * Math.min(1, dt * 5);
+  }
+}
+function autoSolve(h) {
+  const A = h.auto, n = h.task; h.task = null; A.mode = null; h.wait = .6;
+  if (!n || n.done || !A.prob) return;
+  if (Math.random() < .9) {
+    SFX.ding(); n.done = true; h.didNotebook = areaAt(h.x, h.y).name;
+    watchSay(`⭐ ${A.prob.text.replace('?', A.prob.r)}  Notebook done!`);
+    updateHud(); checkWin();
+    return;
+  }
+  SFX.buzz();
+  const wrong = A.prob.r + pick([-2, -1, 1, 2]);
+  watchSay(`❌ ${h.name} wrote ${Math.max(0, wrong)}... the answer was ${A.prob.r}!`);
+  if (h.state !== 'alive' || hidden(h) || G.over) return;
+  if (G.hushT > 0) { toast('📼 The Hush Tape kept the Clankers from hearing that!'); return; }
+  const c = aliveClankers().filter(k => !k.hunting).sort((a, b) => dist(a, h) - dist(b, h))[0];
+  if (!c) return;
+  c.huntTarget = h; c.hunting = true; c.huntT = D().huntT; c.replanT = 0; c.clankT = 0; c.target = null; c.task = null; c.solveT = 0; c.wait = 0;
+  $('huntWarn').style.display = 'block'; $('huntWarn').textContent = `🔊 CLANK... CLANK... RUN, ${h.name.toUpperCase()}!`;
+}
+function autoVote(v, m) {
+  const ok = n => n !== v.name && kidByName(n) && kidByName(n).state === 'alive';
+  const acc = (m.accused || []).filter(ok);
+  if (acc.length) { const cnt = {}; acc.forEach(n => cnt[n] = (cnt[n] || 0) + 1); return Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0]; }
+  if (Math.random() < .55) return 'skip';
+  const sus = living().filter(o => o !== v && !G.trusted.has(o.name));
+  return sus.length ? pick(sus).name : 'skip';
+}
+function autoQuiz(dt) {
+  const z = G.quiz; if (!z) return;
+  z.autoT = (z.autoT == null ? 1.4 : z.autoT) - dt;
+  if (z.autoT > 0) return;
+  z.autoT = rand(.9, 1.6);
+  z.ans = String(Math.random() < .85 ? z.q.r : z.q.r + pick([1, 2])); drawQuiz();
+  quizKey('✔');
+}
+
 // ================= PAUSE MENU & SAVED CHOICES =================
 function syncVolUI() {
   document.querySelectorAll('.musicVol').forEach(el => el.value = SET.music); document.querySelectorAll('.sfxVol').forEach(el => el.value = SET.sfx);
@@ -2617,6 +2745,7 @@ function quitToTitle() {
   ['pauseScreen', 'nbScreen', 'codeScreen', 'quizScreen', 'mtgScreen', 'endScreen'].forEach(id => $(id).style.display = 'none');
   $('huntWarn').style.display = 'none'; $('sabBanner').style.display = 'none'; $('toasts').innerHTML = '';
   ['inv0', 'inv1', 'hint0', 'hint1', 'divider', 'tag0', 'tag1', 'tint', 'mini', 'passPill', 'lyric'].forEach(id => $(id) && ($(id).style.display = 'none'));
+  if (WATCH) clearInterval(WATCH.timer); WATCH = null; $('watchBadge').style.display = $('watchCap').style.display = 'none'; $('endNext').textContent = '';
   G = null; $('startScreen').style.display = 'flex';
 }
 function restartGame() {
@@ -2655,7 +2784,7 @@ function loop(now) {
   if (G) {
     G.t += dt;
     if (G.eject) updateEject(dt);
-    if (G.quiz && !G.paused) { G.quiz.t -= dt; drawQuiz(); if (G.quiz.t <= 0) endQuiz(false); }
+    if (G.quiz && !G.paused) { G.quiz.t -= dt; if (G.watch) autoQuiz(dt); if (G.quiz) { drawQuiz(); if (G.quiz.t <= 0) endQuiz(false); } }
     else if (!G.paused && !G.nbOpen && !G.codeOpen) {
       playerMove(dt);
       updateTeachers(dt); updateSabotage(dt); updateItems(dt); updateNerd(dt);
@@ -2688,6 +2817,7 @@ function loop(now) {
           if (nearSpot(h)) t.push(`${keysTxt[0]}: 🔧 Fix`); else if (nearReportTeacher(h)) t.push(`${keysTxt[0]}: 🗣️ Tell teacher`); else if (nearPrincipal(h)) t.push(`${keysTxt[0]}: 🎫 Get pass`); else if (nearNotebook(h)) t.push(`${keysTxt[0]}: 📓 Solve`); if (nearStatue(h)) t.push(`${keysTxt[1]}: 🚨 Report`); else if (nearEmButton(h)) t.push(`${keysTxt[1]}: 🔴 Meeting`);
           const el = $('hint' + h.pi); el.textContent = t.join('   '); el.style.display = t.length ? 'block' : 'none'; });
       }
+      if (G.watch) ['useBtn', 'fixBtn', 'passBtn', 'tellBtn', 'reportBtn', 'emBtn'].forEach(id => $(id).style.display = 'none');
       if (G.humans.some(h => h.moving) || Math.random() < .05) roomHud();
     } else { $('useBtn').style.display = 'none'; $('fixBtn').style.display = 'none'; $('passBtn').style.display = 'none'; $('tellBtn').style.display = 'none'; $('reportBtn').style.display = 'none'; $('emBtn').style.display = 'none'; $('hint0').style.display = $('hint1').style.display = 'none'; }
     G.fx.forEach(f => f.t -= dt); G.fx = G.fx.filter(f => f.t > 0);
@@ -2710,6 +2840,7 @@ window.addEventListener('keydown', e => {
   if (G.codeOpen) { if (/^[0-9]$/.test(e.key)) codeKey(e.key); else if (e.key === 'Backspace') codeKey('⌫'); else if (e.key === 'Enter') codeKey('✔'); else if (e.key === 'Escape') closeCode(); return; }
   if (G.nbOpen) { if (/^[0-9]$/.test(e.key)) padKey(e.key); else if (e.key === 'Backspace') padKey('⌫'); else if (e.key === 'Enter') padKey('✔'); else if (e.key === 'Escape') closeNotebook(); return; }
   if (G.paused) return;
+  if (G.watch) { if (k === 'm') setMusic(MUSIC.idx + 1); if (k === 'v') setView(VIEW === '3d' ? 'map' : '3d'); if (k === 'l') setSing(!SING); if (k.startsWith('Arrow') || k === ' ') e.preventDefault(); return; }
   const act = humanAct;
   if (G.twoP) {
     if ('123'.includes(k) && k.length === 1) useItem(G.humans[0], +k - 1);
@@ -2762,7 +2893,14 @@ $('viewBtn').onclick = () => setView(VIEW === '3d' ? 'map' : '3d');
 $('musicSel').onchange = () => setMusic(MUSIC.styles.indexOf($('musicSel').value));
 $('playersSel').onchange = () => { $('twoHelp').style.display = $('playersSel').value === '2' ? 'block' : 'none'; };
 $('playBtn').onclick = () => { audio(); saveChoices(); SFX.ding(); setSing($('singChk').checked); setMusic(MUSIC.styles.indexOf($('musicSel').value)); $('startScreen').style.display = 'none'; newGame(); setView(VIEW); };
-$('againBtn').onclick = () => { $('endScreen').style.display = 'none'; newGame(); };
+$('againBtn').onclick = () => { if (WATCH) { clearInterval(WATCH.timer); WATCH.round++; restartGame(); return; } $('endScreen').style.display = 'none'; newGame(); };
+function startWatch() {
+  audio(); saveChoices(); setSing($('singChk').checked); setMusic(MUSIC.styles.indexOf($('musicSel').value));
+  WATCH = { round: 1, kids: 0, clank: 0, timer: null };
+  $('startScreen').style.display = 'none'; $('aboutScreen').style.display = 'none'; newGame(); setView(VIEW);
+}
+$('watchBtn').onclick = () => { SFX.ding(); startWatch(); };
+if (/[?&#]watch\b/i.test(location.search + location.hash)) setTimeout(startWatch, 300);
 })();
 </script>
 </body>

@@ -126,5 +126,12 @@ It **runs in circles**, faster and faster, until its **head pops off** 💥 and 
 - Promo images in /promo (YouTube thumbnail, square promo, 6 screenshots)
 - Test shortcuts removed from the live build
 
+## Added in v1.4 (watch mode)
+- 📺 Watch Mode button on the title screen: the game plays itself, round after round, for livestreams
+- Max goes on autopilot: walks to notebooks and solves them (sometimes gets one wrong, and the Clanker hunts him), runs from the Clanker, reports frozen kids, gets hall passes, helps fix sabotages, answers Theo's pop quizzes and votes in meetings
+- Camera follows Max in 3D or map view (V switches, M changes the song)
+- Next round starts by itself 12 seconds after a win, with a scoreboard (Kids vs Clankers) in the corner
+- Add `?watch` to the link to start Watch Mode automatically (for an OBS browser source)
+
 ## Still to decide
 - Quick-chat phrases
